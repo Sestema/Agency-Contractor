@@ -59,14 +59,39 @@ namespace Win11DesktopApp.Tests
             // Verify Files
             Assert.True(File.Exists(Path.Combine(templateFolder, "template.docx")));
             Assert.True(File.Exists(Path.Combine(templateFolder, "metadata.json")));
-            Assert.True(Directory.Exists(Path.Combine(templateFolder, "versions")));
-            Assert.True(Directory.Exists(Path.Combine(templateFolder, "preview")));
+            Assert.False(Directory.Exists(Path.Combine(templateFolder, "versions")));
+            Assert.False(Directory.Exists(Path.Combine(templateFolder, "preview")));
 
             // Verify Index
             var indexFile = Path.Combine(templatesRoot, "index.json");
             Assert.True(File.Exists(indexFile));
             var indexContent = File.ReadAllText(indexFile);
             Assert.Contains("Test Template", indexContent);
+        }
+
+        [Fact]
+        public void AddTemplateWithoutFile_CreatesNativeDocxWithoutLegacyFiles()
+        {
+            var created = _templateService.AddTemplateWithoutFile("TestFirm", "Blank Contract", "Desc", "DOCX");
+
+            Assert.NotNull(created);
+            Assert.EndsWith("template.docx", created!.FilePath);
+
+            var templateFolder = Path.Combine(_testRootPath, "TestFirm", "Templates", "Blank_Contract");
+            var docxPath = Path.Combine(templateFolder, "template.docx");
+            Assert.True(DocumentGenerationService.CanOpenAsTemplateDocx(docxPath));
+            Assert.False(File.Exists(Path.Combine(templateFolder, "content.rtf")));
+            Assert.False(File.Exists(Path.Combine(templateFolder, "content.xamlpackage")));
+            Assert.False(File.Exists(Path.Combine(templateFolder, "editor-layout.json")));
+            Assert.False(Directory.Exists(Path.Combine(templateFolder, "versions")));
+            Assert.False(Directory.Exists(Path.Combine(templateFolder, "preview")));
+
+            var metadata = SafeFileService.ReadJson<TemplateMetadata>(Path.Combine(templateFolder, "metadata.json"));
+            Assert.Equal(TemplateEditorFormat.Docx, metadata?.EditorFormat);
+
+            var index = File.ReadAllText(Path.Combine(_testRootPath, "TestFirm", "Templates", "index.json"));
+            Assert.Contains("Blank Contract", index);
+            Assert.Contains("template.docx", index);
         }
 
         [Fact]
@@ -158,6 +183,64 @@ namespace Win11DesktopApp.Tests
             var targetIndexFile = Path.Combine(_testRootPath, FolderService.NormalizeFolderName(targetFirm), "Templates", "index.json");
             Assert.True(File.Exists(targetIndexFile));
             Assert.Contains("Copied Template", File.ReadAllText(targetIndexFile));
+        }
+
+        [Fact]
+        public void RenameTemplate_MovesFolderAndUpdatesIndexPath()
+        {
+            var sourceFile = Path.Combine(_testRootPath, "source.docx");
+            File.WriteAllText(sourceFile, "dummy");
+            _templateService.AddTemplate("TestFirm", "Old Contract", "Desc", "DOCX", sourceFile);
+
+            var template = _templateService.GetTemplates("TestFirm").Single();
+            var result = _templateService.RenameTemplate("TestFirm", template, "New Contract");
+
+            Assert.Equal(TemplateRenameResult.Renamed, result);
+            var templatesRoot = Path.Combine(_testRootPath, "TestFirm", "Templates");
+            Assert.False(Directory.Exists(Path.Combine(templatesRoot, "Old_Contract")));
+            Assert.True(File.Exists(Path.Combine(templatesRoot, "New_Contract", "template.docx")));
+
+            var renamed = _templateService.GetTemplates("TestFirm").Single();
+            Assert.Equal("New Contract", renamed.Name);
+            Assert.Contains("New_Contract", renamed.FilePath);
+
+            var metadata = SafeFileService.ReadJson<TemplateMetadata>(Path.Combine(templatesRoot, "New_Contract", "metadata.json"));
+            Assert.Equal("New Contract", metadata?.Name);
+        }
+
+        [Fact]
+        public void RenameTemplate_RejectsExistingNameWithoutReplacingFolder()
+        {
+            var sourceFile = Path.Combine(_testRootPath, "source.docx");
+            File.WriteAllText(sourceFile, "dummy");
+            _templateService.AddTemplate("TestFirm", "Alpha", "Desc", "DOCX", sourceFile);
+            _templateService.AddTemplate("TestFirm", "Beta", "Desc", "DOCX", sourceFile);
+
+            var alpha = _templateService.GetTemplates("TestFirm").Single(t => t.Name == "Alpha");
+            File.WriteAllText(Path.Combine(_testRootPath, "TestFirm", "Templates", "Alpha", "template.docx"), "alpha-bytes");
+
+            var result = _templateService.RenameTemplate("TestFirm", alpha, "Beta");
+
+            Assert.Equal(TemplateRenameResult.NameTaken, result);
+            Assert.True(File.Exists(Path.Combine(_testRootPath, "TestFirm", "Templates", "Alpha", "template.docx")));
+            Assert.Equal("alpha-bytes", File.ReadAllText(Path.Combine(_testRootPath, "TestFirm", "Templates", "Alpha", "template.docx")));
+            Assert.Equal("Alpha", _templateService.GetTemplates("TestFirm").Single(t => t.FilePath.Contains("Alpha")).Name);
+        }
+
+        [Fact]
+        public void RenameTemplate_SameFolderUpdatesLabelOnly()
+        {
+            var sourceFile = Path.Combine(_testRootPath, "source.docx");
+            File.WriteAllText(sourceFile, "dummy");
+            _templateService.AddTemplate("TestFirm", "Test Template", "Desc", "DOCX", sourceFile);
+
+            var template = _templateService.GetTemplates("TestFirm").Single();
+            var result = _templateService.RenameTemplate("TestFirm", template, "Test_Template");
+
+            Assert.Equal(TemplateRenameResult.Renamed, result);
+            var folder = Path.Combine(_testRootPath, "TestFirm", "Templates", "Test_Template");
+            Assert.True(Directory.Exists(folder));
+            Assert.Equal("Test_Template", SafeFileService.ReadJson<TemplateMetadata>(Path.Combine(folder, "metadata.json"))?.Name);
         }
 
         public void Dispose()

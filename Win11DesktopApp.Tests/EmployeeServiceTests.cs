@@ -577,6 +577,53 @@ namespace Win11DesktopApp.Tests
             Assert.Contains(history, entry => entry.EventType == "ArchiveUndone");
         }
 
+        private async Task<ArchiveEmployeeResult> ArchiveEmployeeWithPackageTick(string firmName, string employeeFolder)
+        {
+            var data = _employeeService.LoadEmployeeData(employeeFolder)!;
+            data.RequiredDocumentStatuses = new()
+            {
+                new RequiredDocumentStatus { FirmName = firmName, TemplateId = "t1", NameSnapshot = "Smlouva", IsPresent = true }
+            };
+            Assert.True(_employeeService.SaveEmployeeData(employeeFolder, data));
+
+            var archiveResult = await _employeeService.ArchiveEmployee(employeeFolder, firmName, "2026-03-20");
+            Assert.True(archiveResult.Success);
+            return archiveResult;
+        }
+
+        [Fact]
+        public async Task RestoreFromArchive_ShouldCloseDocumentPackagePeriod_AndKeepTicks()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployee(firmName, "Olena", "Koval", "2026-03-01", uniqueId: "emp-period-1");
+            var archiveResult = await ArchiveEmployeeWithPackageTick(firmName, employeeFolder);
+
+            var restore = await _employeeService.RestoreFromArchive(
+                archiveResult.ArchiveFolder, firmName, "2026-05-01", "2026-05-01", "Operator", string.Empty, string.Empty);
+
+            Assert.True(restore.Success);
+            var status = Assert.Single(_employeeService.LoadEmployeeData(restore.RestoredFolder)!.RequiredDocumentStatuses);
+            Assert.True(status.IsPeriodClosed);
+            Assert.True(status.IsPresent);
+            Assert.Equal("2026-03-01", status.PeriodStart);
+            Assert.Equal("2026-03-20", status.PeriodEnd);
+        }
+
+        [Fact]
+        public async Task UndoArchiveAsync_ShouldKeepDocumentPackagePeriodOpen()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployee(firmName, "Petro", "Bondar", "2026-03-01", uniqueId: "emp-period-2");
+            var archiveResult = await ArchiveEmployeeWithPackageTick(firmName, employeeFolder);
+
+            var undo = await _employeeService.UndoArchiveAsync(archiveResult.OperationId);
+
+            Assert.True(undo.Success);
+            var status = Assert.Single(_employeeService.LoadEmployeeData(undo.RestoredFolder)!.RequiredDocumentStatuses);
+            Assert.False(status.IsPeriodClosed);
+            Assert.True(status.IsPresent);
+        }
+
         private string CreateEmployee(string firmName, string firstName, string lastName, string startDate, string uniqueId)
         {
             var employeesFolder = _folderService.GetEmployeesFolder(firmName);

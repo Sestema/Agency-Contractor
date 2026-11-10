@@ -616,6 +616,10 @@
     <sys:String x:Key="DetBtnGenerate">Generovat dokument</sys:String>
     <sys:String x:Key="DetBtnOpenFolder">Otevřít složku</sys:String>
     <sys:String x:Key="DetBtnExportPdf">Export profilu PDF</sys:String>
+    <sys:String x:Key="DetBtnDocumentsPdf">Všechny dokumenty do jednoho PDF</sys:String>
+    <sys:String x:Key="DetDocumentsPdfFileNameFmt">{0} - dokumenty.pdf</sys:String>
+    <sys:String x:Key="MsgDocumentsPdfEmpty">Žádný dokument nešlo načíst, PDF nebylo vytvořeno.</sys:String>
+    <sys:String x:Key="MsgDocumentsPdfPartialFmt">PDF uloženo. Nezahrnuto: {0}</sys:String>
     <sys:String x:Key="DetProfileCompletion">Vyplnění: </sys:String>
     <sys:String x:Key="DetBtnArchive">Do archivu</sys:String>
     <sys:String x:Key="DetBtnDeleteEmployee">Smazat</sys:String>
@@ -645,6 +649,9 @@
     <sys:String x:Key="DetTooltipEditDoc">Upravit aktuální dokument</sys:String>
     <sys:String x:Key="DetCustomDocPreviousFirmHint">Přidáno, když zaměstnanec pracoval v této firmě.</sys:String>
     <sys:String x:Key="DetCustomDocUnknownFirm">Předchozí firmy</sys:String>
+    <sys:String x:Key="DetCustomDocCurrentPeriod">Aktuální období</sys:String>
+    <sys:String x:Key="DetCustomDocPeriodFrom">od {0}</sys:String>
+    <sys:String x:Key="DetCustomDocPeriodCount">Dokumentů: {0}</sys:String>
     <sys:String x:Key="DetCustomDocFieldName">Název dokumentu</sys:String>
     <sys:String x:Key="DetCustomDocFieldSignDate">Datum podpisu</sys:String>
     <sys:String x:Key="DetCustomDocFieldExpiry">Datum vypršení (volitelné)</sys:String>
@@ -782,6 +789,14 @@
     <sys:String x:Key="DetSidebarNoteWrite">Napsat</sys:String>
     <sys:String x:Key="DetDocumentPackageCurrentFirm">Aktuální firma: {0}</sys:String>
     <sys:String x:Key="DetDocumentPackageHistoryHint">Pouze pro čtení — data z předchozí firmy.</sys:String>
+    <sys:String x:Key="DetDocumentPackagePreviousPeriod">Předchozí období</sys:String>
+    <sys:String x:Key="DetDocumentPackagePeriodHint">Pouze náhled — předchozí pracovní období.</sys:String>
+    <sys:String x:Key="DetPackageStatusAllDone">Originál i sken</sys:String>
+    <sys:String x:Key="DetPackageStatusPresent">Dokument je k dispozici</sys:String>
+    <sys:String x:Key="DetPackageStatusScanned">Sken je k dispozici</sys:String>
+    <sys:String x:Key="DetPackageStatusNoScan">Chybí sken</sys:String>
+    <sys:String x:Key="DetPackageStatusNoOriginal">Chybí originál</sys:String>
+    <sys:String x:Key="DetPackageStatusMissing">Dokument chybí</sys:String>
     <sys:String x:Key="DetDocumentPackageRetiredSection">Dříve v balíčku této firmy (již nevyžadováno)</sys:String>
     <sys:String x:Key="DetDocumentPackageRetiredHint">Dokument byl odebrán z balíčku firmy. Stavy jsou uloženy pouze pro prohlížení.</sys:String>
     <sys:String x:Key="LabelDocumentPackageNote">Poznámka</sys:String>
@@ -792,6 +807,7 @@
     <sys:String x:Key="DetSalaryTotalNet">Celková výplata</sys:String>
     <sys:String x:Key="DetSalaryTotalHours">Celkové hodiny</sys:String>
     <sys:String x:Key="DetSalaryMonthCount">Měsíců</sys:String>
+    <sys:String x:Key="DetSalaryAverageMonth">Průměr za měsíc</sys:String>
     <sys:String x:Key="DetSalaryEmpty">Zatím žádné platby</sys:String>
     <sys:String x:Key="DetSalaryEmptyMsg">Když bude zaměstnanec označen jako vyplacený, informace se zobrazí zde.</sys:String>
     <sys:String x:Key="DetGenTitle">Výběr šablony pro generaci</sys:String>
@@ -1098,6 +1114,7 @@
     <sys:String x:Key="TplRenameTitle">Přejmenovat šablonu</sys:String>
     <sys:String x:Key="TplRenamePrompt">Nový název šablony:</sys:String>
     <sys:String x:Key="TplRenameBtn">Přejmenovat</sys:String>
+    <sys:String x:Key="TplRenameExists">Šablona s tímto názvem už existuje. Zvolte jiný název.</sys:String>
     <sys:String x:Key="TplUpdated">Aktualizováno: </sys:String>
     <sys:String x:Key="TplTagsTitle">Dostupné tagy pro šablonu</sys:String>
     <sys:String x:Key="TplTagsDesc">Stiskněte Kopírovat pro zkopírování tagu do schránky. Poté vložte tag do dokumentu ve Wordu/Excelu.</sys:String>
@@ -2125,6 +2142,9 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="ExportColStartDate">Datum nástupu</sys:String>
     <sys:String x:Key="EmpCardContacts">Kontakty</sys:String>
     <sys:String x:Key="ExportColStatus">Stav</sys:String>
+    <sys:String x:Key="ExportColFirm">Firma</sys:String>
+    <sys:String x:Key="ExportAllFirms">Všechny firmy</sys:String>
+    <sys:String x:Key="MsgExportPartialFmt">Exportováno {0} z {1}. Nepodařilo se načíst: {2}</sys:String>
     <sys:String x:Key="MsgExportError">Chyba exportu: {0}</sys:String>
     <sys:String x:Key="MsgSelectedCount">Vybráno zaměstnanců: {0}</sys:String>
     <sys:String x:Key="MsgBatchResult">Vygenerováno: {0}, chyb: {1}</sys:String>

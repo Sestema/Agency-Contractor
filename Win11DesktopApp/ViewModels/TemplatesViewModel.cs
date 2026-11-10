@@ -288,7 +288,17 @@ namespace Win11DesktopApp.ViewModels
                 try
                 {
                     var oldName = _renamingTemplate.Name;
-                    _templateService.RenameTemplate(_firmName, _renamingTemplate, newName);
+                    var result = _templateService.RenameTemplate(_firmName, _renamingTemplate, newName);
+                    if (result == TemplateRenameResult.NameTaken)
+                    {
+                        MessageBox.Show(
+                            GetString("TplRenameExists") ?? "A template with this name already exists. Choose another name.",
+                            GetString("TplRenameTitle") ?? "Rename Template",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                        return;
+                    }
+
                     _activityLogService.Log("TemplateRenamed", "Template", _firmName, "",
                         $"Перейменовано шаблон «{oldName}» → «{newName}» ({_firmName})",
                         oldName, newName);

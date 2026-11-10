@@ -616,6 +616,10 @@
     <sys:String x:Key="DetBtnGenerate">Generate document</sys:String>
     <sys:String x:Key="DetBtnOpenFolder">Open folder</sys:String>
     <sys:String x:Key="DetBtnExportPdf">Export profile PDF</sys:String>
+    <sys:String x:Key="DetBtnDocumentsPdf">All documents in one PDF</sys:String>
+    <sys:String x:Key="DetDocumentsPdfFileNameFmt">{0} - documents.pdf</sys:String>
+    <sys:String x:Key="MsgDocumentsPdfEmpty">No document could be read, the PDF was not created.</sys:String>
+    <sys:String x:Key="MsgDocumentsPdfPartialFmt">PDF saved. Not included: {0}</sys:String>
     <sys:String x:Key="DetProfileCompletion">Completion: </sys:String>
     <sys:String x:Key="DetBtnArchive">To archive</sys:String>
     <sys:String x:Key="DetBtnDeleteEmployee">Delete</sys:String>
@@ -645,6 +649,9 @@
     <sys:String x:Key="DetTooltipEditDoc">Edit the current document</sys:String>
     <sys:String x:Key="DetCustomDocPreviousFirmHint">Added while the employee worked at this company.</sys:String>
     <sys:String x:Key="DetCustomDocUnknownFirm">Previous companies</sys:String>
+    <sys:String x:Key="DetCustomDocCurrentPeriod">Current period</sys:String>
+    <sys:String x:Key="DetCustomDocPeriodFrom">from {0}</sys:String>
+    <sys:String x:Key="DetCustomDocPeriodCount">Documents: {0}</sys:String>
     <sys:String x:Key="DetCustomDocFieldName">Document name</sys:String>
     <sys:String x:Key="DetCustomDocFieldSignDate">Sign date</sys:String>
     <sys:String x:Key="DetCustomDocFieldExpiry">Expiry date (optional)</sys:String>
@@ -782,6 +789,14 @@
     <sys:String x:Key="DetSidebarNoteWrite">Write</sys:String>
     <sys:String x:Key="DetDocumentPackageCurrentFirm">Current firm: {0}</sys:String>
     <sys:String x:Key="DetDocumentPackageHistoryHint">Read-only — data from a previous firm.</sys:String>
+    <sys:String x:Key="DetDocumentPackagePreviousPeriod">Previous period</sys:String>
+    <sys:String x:Key="DetDocumentPackagePeriodHint">View only — previous work period.</sys:String>
+    <sys:String x:Key="DetPackageStatusAllDone">Original and scan</sys:String>
+    <sys:String x:Key="DetPackageStatusPresent">Document present</sys:String>
+    <sys:String x:Key="DetPackageStatusScanned">Scan present</sys:String>
+    <sys:String x:Key="DetPackageStatusNoScan">Scan missing</sys:String>
+    <sys:String x:Key="DetPackageStatusNoOriginal">Original missing</sys:String>
+    <sys:String x:Key="DetPackageStatusMissing">Document missing</sys:String>
     <sys:String x:Key="DetDocumentPackageRetiredSection">Previously in this firm’s package (no longer required)</sys:String>
     <sys:String x:Key="DetDocumentPackageRetiredHint">This document was removed from the firm’s package. Statuses are kept for viewing only.</sys:String>
     <sys:String x:Key="LabelDocumentPackageNote">Note</sys:String>
@@ -792,6 +807,7 @@
     <sys:String x:Key="DetSalaryTotalNet">Total paid</sys:String>
     <sys:String x:Key="DetSalaryTotalHours">Total hours</sys:String>
     <sys:String x:Key="DetSalaryMonthCount">Months</sys:String>
+    <sys:String x:Key="DetSalaryAverageMonth">Monthly average</sys:String>
     <sys:String x:Key="DetSalaryEmpty">No payments yet</sys:String>
     <sys:String x:Key="DetSalaryEmptyMsg">When an employee is marked as paid, the information will appear here.</sys:String>
     <sys:String x:Key="DetGenTitle">Select template for generation</sys:String>
@@ -1098,6 +1114,7 @@
     <sys:String x:Key="TplRenameTitle">Rename Template</sys:String>
     <sys:String x:Key="TplRenamePrompt">New template name:</sys:String>
     <sys:String x:Key="TplRenameBtn">Rename</sys:String>
+    <sys:String x:Key="TplRenameExists">A template with this name already exists. Choose another name.</sys:String>
     <sys:String x:Key="TplUpdated">Updated: </sys:String>
     <sys:String x:Key="TplTagsTitle">Available tags for template</sys:String>
     <sys:String x:Key="TplTagsDesc">Press Copy to copy a tag to clipboard. Then paste the tag into the document in Word/Excel.</sys:String>
@@ -2125,6 +2142,9 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="ExportColStartDate">Start date</sys:String>
     <sys:String x:Key="EmpCardContacts">Contacts</sys:String>
     <sys:String x:Key="ExportColStatus">Status</sys:String>
+    <sys:String x:Key="ExportColFirm">Company</sys:String>
+    <sys:String x:Key="ExportAllFirms">All companies</sys:String>
+    <sys:String x:Key="MsgExportPartialFmt">Exported {0} of {1}. Could not read: {2}</sys:String>
     <sys:String x:Key="MsgExportError">Export error: {0}</sys:String>
     <sys:String x:Key="MsgSelectedCount">Selected employees: {0}</sys:String>
     <sys:String x:Key="MsgBatchResult">Generated: {0}, errors: {1}</sys:String>

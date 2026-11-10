@@ -167,6 +167,50 @@ namespace Win11DesktopApp.ViewModels
 
         public int NavigationDirection { get; private set; } = 0;
 
+        public ObservableCollection<SalaryPickerMonth> PickerMonths { get; } = new();
+        public ICommand PickerPrevYearCommand { get; }
+        public ICommand PickerNextYearCommand { get; }
+        public ICommand SelectPickerMonthCommand { get; }
+
+        private int _pickerRequestVersion;
+
+        private bool _isMonthPickerOpen;
+        public bool IsMonthPickerOpen
+        {
+            get => _isMonthPickerOpen;
+            set
+            {
+                if (!SetProperty(ref _isMonthPickerOpen, value))
+                    return;
+
+                if (value)
+                    _ = OpenMonthPickerAsync();
+                else
+                    _pickerRequestVersion++;
+            }
+        }
+
+        private int _pickerYear;
+        public int PickerYear
+        {
+            get => _pickerYear;
+            private set => SetProperty(ref _pickerYear, value);
+        }
+
+        private bool _hasPickerPrevYear;
+        public bool HasPickerPrevYear
+        {
+            get => _hasPickerPrevYear;
+            private set => SetProperty(ref _hasPickerPrevYear, value);
+        }
+
+        private bool _hasPickerNextYear;
+        public bool HasPickerNextYear
+        {
+            get => _hasPickerNextYear;
+            private set => SetProperty(ref _hasPickerNextYear, value);
+        }
+
         private bool _isDirty;
         public bool IsDirty
         {
@@ -532,6 +576,11 @@ namespace Win11DesktopApp.ViewModels
             ExportExcelCommand = new RelayCommand(o => ExportToExcel());
             PrevMonthCommand = new AsyncRelayCommand(_ => ChangeMonthAsync(-1), _ => !IsLoading);
             NextMonthCommand = new AsyncRelayCommand(_ => ChangeMonthAsync(1), _ => !IsLoading);
+            PickerPrevYearCommand = new RelayCommand(_ => ShowPickerYear(PickerYear - 1));
+            PickerNextYearCommand = new RelayCommand(_ => ShowPickerYear(PickerYear + 1));
+            SelectPickerMonthCommand = new AsyncRelayCommand(
+                o => GoToPickerMonthAsync(o as SalaryPickerMonth),
+                _ => !IsLoading);
             LoadEmployeesCommand = new RelayCommand(o => { });
             OpenAdvanceDialogCommand = new RelayCommand(o => OpenAdvanceDialog(), _ => CanEditAnyVisibleSalary);
             CloseAdvanceDialogCommand = new RelayCommand(o => IsAdvanceDialogOpen = false);
@@ -616,10 +665,15 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(HasQrTransferColumn));
         }
 
-        private async Task ChangeMonthAsync(int delta)
+        private Task ChangeMonthAsync(int delta)
         {
-            NavigationDirection = delta;
             var date = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(delta);
+            return NavigateToMonthAsync(date, delta, requireEntries: delta > 0);
+        }
+
+        private async Task NavigateToMonthAsync(DateTime date, int direction, bool requireEntries)
+        {
+            NavigationDirection = direction;
             var startedLoad = false;
             try
             {
@@ -631,7 +685,7 @@ namespace Win11DesktopApp.ViewModels
 
                 var testEntries = monthResult.entries;
 
-                if (delta > 0 && testEntries.Count == 0)
+                if (requireEntries && testEntries.Count == 0)
                     return;
 
                 if (Entries.Count > 0 && HasUnsavedSalaryChanges() && !await SaveReportAsync())
@@ -651,6 +705,163 @@ namespace Win11DesktopApp.ViewModels
                 if (!startedLoad)
                     IsLoading = false;
             }
+        }
+
+        private async Task OpenMonthPickerAsync()
+        {
+            try
+            {
+                var culture = GetPickerCulture();
+                PickerMonths.Clear();
+                for (var month = 1; month <= 12; month++)
+                {
+                    var name = culture.DateTimeFormat.AbbreviatedMonthNames[month - 1].TrimEnd('.');
+                    name = culture.TextInfo.ToUpper(name[0]) + name[1..];
+                    PickerMonths.Add(new SalaryPickerMonth(month, name));
+                }
+
+                PickerYear = _selectedYear;
+                UpdatePickerCells(clearAmounts: true);
+
+                // Picks up months created on another PC since the last scan.
+                await RefreshAvailableSalaryMonthsAsync(force: true);
+                if (!IsMonthPickerOpen)
+                    return;
+
+                UpdatePickerCells(clearAmounts: false);
+                await LoadPickerAmountsAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("SalaryViewModel.OpenMonthPickerAsync", ex);
+            }
+        }
+
+        private void ShowPickerYear(int year)
+        {
+            PickerYear = year;
+            UpdatePickerCells(clearAmounts: true);
+            _ = LoadPickerAmountsAsync();
+        }
+
+        private void UpdatePickerCells(bool clearAmounts)
+        {
+            var available = _availableSalaryMonths;
+            foreach (var cell in PickerMonths)
+            {
+                cell.Exists = available?.Contains((PickerYear, cell.Month)) == true;
+                cell.IsSelected = PickerYear == _selectedYear && cell.Month == _selectedMonth;
+                if (clearAmounts)
+                {
+                    cell.AmountText = string.Empty;
+                    cell.AmountToolTip = null;
+                }
+            }
+
+            HasPickerPrevYear = available?.Any(m => m.year < PickerYear) == true;
+            HasPickerNextYear = available?.Any(m => m.year > PickerYear) == true;
+        }
+
+        // Reads only the visible year, off the UI thread; a newer request discards this result.
+        private async Task LoadPickerAmountsAsync()
+        {
+            var version = ++_pickerRequestVersion;
+            var year = PickerYear;
+
+            try
+            {
+                var allLabel = L("FinFilterAll") ?? "All";
+                var firmFilter = string.IsNullOrEmpty(_selectedFirmFilter) || _selectedFirmFilter == allLabel
+                    ? null
+                    : _selectedFirmFilter;
+                var months = PickerMonths.Where(c => c.Exists).Select(c => c.Month).ToList();
+
+                // Restricted users must only see totals of the firms they can access.
+                Dictionary<int, HashSet<string>>? accessibleFirms = null;
+                if (PolicyService.IsCompanyDataScopeRestricted)
+                    accessibleFirms = months.ToDictionary(m => m, m => GetAccessibleFirmNames(year, m));
+
+                var totals = await Task.Run(() =>
+                {
+                    var result = new Dictionary<int, decimal>();
+                    foreach (var month in months)
+                    {
+                        var loaded = _financeService.TryLoadAllFirmPayments(year, month);
+                        if (!loaded.success)
+                            continue;
+
+                        result[month] = loaded.entries
+                            .Where(e => firmFilter == null
+                                || string.Equals(e.FirmName, firmFilter, StringComparison.OrdinalIgnoreCase))
+                            .Where(e => accessibleFirms == null || accessibleFirms[month].Contains(e.FirmName))
+                            .Sum(e => e.SavedNetSalary);
+                    }
+
+                    return result;
+                });
+
+                if (version != _pickerRequestVersion)
+                    return;
+
+                var culture = GetPickerCulture();
+                foreach (var cell in PickerMonths)
+                {
+                    if (year == _selectedYear && cell.Month == _selectedMonth && Entries.Count > 0)
+                    {
+                        // The open month may hold edits that are not saved yet.
+                        totals[cell.Month] = Entries
+                            .Where(e => firmFilter == null
+                                || string.Equals(e.FirmName, firmFilter, StringComparison.OrdinalIgnoreCase))
+                            .Sum(e => e.NetSalary);
+                    }
+
+                    if (!totals.TryGetValue(cell.Month, out var total))
+                        continue;
+
+                    cell.AmountText = FormatPickerAmount(total, culture);
+                    cell.AmountToolTip = total.ToString("N0", culture);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("SalaryViewModel.LoadPickerAmountsAsync", ex);
+            }
+        }
+
+        private async Task GoToPickerMonthAsync(SalaryPickerMonth? cell)
+        {
+            if (cell == null)
+                return;
+
+            var target = new DateTime(PickerYear, cell.Month, 1);
+            var current = new DateTime(_selectedYear, _selectedMonth, 1);
+            IsMonthPickerOpen = false;
+
+            if (target != current)
+                await NavigateToMonthAsync(target, target > current ? 1 : -1, requireEntries: false);
+        }
+
+        private CultureInfo GetPickerCulture() =>
+            (_appSettingsService.Settings.LanguageCode ?? "uk") switch
+            {
+                "en" => new CultureInfo("en-US"),
+                "cs" => new CultureInfo("cs-CZ"),
+                "ru" => new CultureInfo("ru-RU"),
+                _ => new CultureInfo("uk-UA")
+            };
+
+        internal static string FormatPickerAmount(decimal amount, CultureInfo culture)
+        {
+            var sign = amount < 0 ? "-" : string.Empty;
+            var value = Math.Abs(amount);
+
+            if (value >= 999_500m)
+                return sign + (value / 1_000_000m).ToString("0.##", culture) + "M";
+
+            if (value >= 1_000m)
+                return sign + Math.Round(value / 1_000m).ToString("0", culture) + "k";
+
+            return sign + value.ToString("0", culture);
         }
 
         private static string FolderKey(string path) =>

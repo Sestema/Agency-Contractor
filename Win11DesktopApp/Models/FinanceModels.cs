@@ -499,6 +499,28 @@ namespace Win11DesktopApp.Models
         }
     }
 
+    /// <summary>One extra salary column as shown in the employee's history.</summary>
+    public sealed class SalaryExtraItem
+    {
+        public SalaryExtraItem(CustomFieldSnapshot field)
+        {
+            Name = field.Name;
+            Value = field.Value;
+            Sign = field.Operation switch
+            {
+                nameof(FieldOperation.Add) or "+" => "+",
+                nameof(FieldOperation.Subtract) or "-" => "−",
+                nameof(FieldOperation.Multiply) or "*" => "×",
+                nameof(FieldOperation.Divide) or "/" => "÷",
+                _ => string.Empty
+            };
+        }
+
+        public string Name { get; }
+        public string Sign { get; }
+        public decimal Value { get; }
+    }
+
     public class SalaryMonthDisplay
     {
         public SalaryHistoryRecord? Salary { get; set; }
@@ -517,6 +539,15 @@ namespace Win11DesktopApp.Models
         public bool HasDebt => MonthBalance < 0;
         public bool HasCarriedDebt => CarriedDebt > 0;
         public bool IsNegativeNet => HasSalary && Salary!.NetSalary < 0;
+
+        /// <summary>True where the employee's firm changes in the newest-first timeline.</summary>
+        public bool ShowFirmDivider { get; set; }
+        public bool HasSalaryAdvance => HasSalary && Salary!.Advance != 0;
+        public bool HasSalaryNote => HasSalary && !string.IsNullOrWhiteSpace(Salary!.Note);
+
+        public IReadOnlyList<SalaryExtraItem> Extras =>
+            Salary?.CustomFields?.Select(extra => new SalaryExtraItem(extra)).ToList()
+            ?? (IReadOnlyList<SalaryExtraItem>)Array.Empty<SalaryExtraItem>();
 
         private static string FormatMonthKey(string key)
         {

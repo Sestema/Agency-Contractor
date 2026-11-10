@@ -616,6 +616,10 @@
     <sys:String x:Key="DetBtnGenerate">Сгенерировать документ</sys:String>
     <sys:String x:Key="DetBtnOpenFolder">Открыть папку</sys:String>
     <sys:String x:Key="DetBtnExportPdf">Экспорт анкеты PDF</sys:String>
+    <sys:String x:Key="DetBtnDocumentsPdf">Все документы в один PDF</sys:String>
+    <sys:String x:Key="DetDocumentsPdfFileNameFmt">{0} - документы.pdf</sys:String>
+    <sys:String x:Key="MsgDocumentsPdfEmpty">Не удалось прочитать ни один документ, PDF не создан.</sys:String>
+    <sys:String x:Key="MsgDocumentsPdfPartialFmt">PDF сохранён. Не вошло: {0}</sys:String>
     <sys:String x:Key="DetProfileCompletion">Заполнение: </sys:String>
     <sys:String x:Key="DetBtnArchive">В архив</sys:String>
     <sys:String x:Key="DetBtnDeleteEmployee">Удалить</sys:String>
@@ -645,6 +649,9 @@
     <sys:String x:Key="DetTooltipEditDoc">Редактировать текущий документ</sys:String>
     <sys:String x:Key="DetCustomDocPreviousFirmHint">Добавлено, когда сотрудник работал в этой фирме.</sys:String>
     <sys:String x:Key="DetCustomDocUnknownFirm">Предыдущие фирмы</sys:String>
+    <sys:String x:Key="DetCustomDocCurrentPeriod">Текущий период</sys:String>
+    <sys:String x:Key="DetCustomDocPeriodFrom">с {0}</sys:String>
+    <sys:String x:Key="DetCustomDocPeriodCount">Документов: {0}</sys:String>
     <sys:String x:Key="DetCustomDocFieldName">Название документа</sys:String>
     <sys:String x:Key="DetCustomDocFieldSignDate">Дата подписания</sys:String>
     <sys:String x:Key="DetCustomDocFieldExpiry">Дата окончания (необязательно)</sys:String>
@@ -782,6 +789,14 @@
     <sys:String x:Key="DetSidebarNoteWrite">Написать</sys:String>
     <sys:String x:Key="DetDocumentPackageCurrentFirm">Текущая фирма: {0}</sys:String>
     <sys:String x:Key="DetDocumentPackageHistoryHint">Только просмотр — данные с предыдущей фирмы.</sys:String>
+    <sys:String x:Key="DetDocumentPackagePreviousPeriod">Предыдущий период</sys:String>
+    <sys:String x:Key="DetDocumentPackagePeriodHint">Только просмотр — предыдущий период работы.</sys:String>
+    <sys:String x:Key="DetPackageStatusAllDone">Есть оригинал и скан</sys:String>
+    <sys:String x:Key="DetPackageStatusPresent">Документ есть</sys:String>
+    <sys:String x:Key="DetPackageStatusScanned">Скан есть</sys:String>
+    <sys:String x:Key="DetPackageStatusNoScan">Нет скана</sys:String>
+    <sys:String x:Key="DetPackageStatusNoOriginal">Нет оригинала</sys:String>
+    <sys:String x:Key="DetPackageStatusMissing">Документа нет</sys:String>
     <sys:String x:Key="DetDocumentPackageRetiredSection">Ранее в пакете этой фирмы (больше не требуется)</sys:String>
     <sys:String x:Key="DetDocumentPackageRetiredHint">Документ убрали из пакета фирмы. Статусы сохранены только для просмотра.</sys:String>
     <sys:String x:Key="LabelDocumentPackageNote">Примечание</sys:String>
@@ -792,6 +807,7 @@
     <sys:String x:Key="DetSalaryTotalNet">Общая выплата</sys:String>
     <sys:String x:Key="DetSalaryTotalHours">Общие часы</sys:String>
     <sys:String x:Key="DetSalaryMonthCount">Месяцев</sys:String>
+    <sys:String x:Key="DetSalaryAverageMonth">Средняя за месяц</sys:String>
     <sys:String x:Key="DetSalaryEmpty">Выплат пока нет</sys:String>
     <sys:String x:Key="DetSalaryEmptyMsg">Когда сотрудника отметят как выплаченного, информация появится здесь.</sys:String>
     <sys:String x:Key="DetGenTitle">Выбор шаблона для генерации</sys:String>
@@ -1098,6 +1114,7 @@
     <sys:String x:Key="TplRenameTitle">Переименовать шаблон</sys:String>
     <sys:String x:Key="TplRenamePrompt">Новое название шаблона:</sys:String>
     <sys:String x:Key="TplRenameBtn">Переименовать</sys:String>
+    <sys:String x:Key="TplRenameExists">Шаблон с таким названием уже есть. Выберите другое название.</sys:String>
     <sys:String x:Key="TplUpdated">Обновлено: </sys:String>
     <sys:String x:Key="TplTagsTitle">Доступные теги для шаблона</sys:String>
     <sys:String x:Key="TplTagsDesc">Нажмите Копировать чтобы скопировать тег в буфер обмена. Затем вставьте тег в документ в Word/Excel.</sys:String>
@@ -2125,6 +2142,9 @@
     <sys:String x:Key="ExportColStartDate">Дата начала</sys:String>
     <sys:String x:Key="EmpCardContacts">Контакты</sys:String>
     <sys:String x:Key="ExportColStatus">Статус</sys:String>
+    <sys:String x:Key="ExportColFirm">Фирма</sys:String>
+    <sys:String x:Key="ExportAllFirms">Все фирмы</sys:String>
+    <sys:String x:Key="MsgExportPartialFmt">Экспортировано {0} из {1}. Не удалось прочитать: {2}</sys:String>
     <sys:String x:Key="MsgExportError">Ошибка экспорта: {0}</sys:String>
     <sys:String x:Key="MsgSelectedCount">Выбрано сотрудников: {0}</sys:String>
     <sys:String x:Key="MsgBatchResult">Сгенерировано: {0}, ошибок: {1}</sys:String>

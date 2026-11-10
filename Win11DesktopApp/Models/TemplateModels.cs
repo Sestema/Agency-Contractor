@@ -57,6 +57,12 @@ namespace Win11DesktopApp.Models
         public const string Docx = "docx";
     }
 
+    public enum TemplateRenameResult
+    {
+        Renamed,
+        NameTaken
+    }
+
     public class TemplateEditorLayoutSettings
     {
         public string PageSizeKey { get; set; } = "a4";

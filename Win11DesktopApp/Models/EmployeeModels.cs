@@ -38,6 +38,10 @@ namespace Win11DesktopApp.EmployeeModels
         public bool IsPresent { get; set; }
         public bool IsScanned { get; set; }
         public string Note { get; set; } = string.Empty;
+        /// <summary>Set when the employee returned from the archive; the status then becomes read-only history.</summary>
+        public bool IsPeriodClosed { get; set; }
+        public string PeriodStart { get; set; } = string.Empty;
+        public string PeriodEnd { get; set; } = string.Empty;
     }
 
     public class EmployeeAddress : INotifyPropertyChanged

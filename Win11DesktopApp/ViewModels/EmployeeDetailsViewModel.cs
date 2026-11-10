@@ -119,6 +119,7 @@ namespace Win11DesktopApp.ViewModels
                 _status.IsPresent = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsComplete));
+                OnPropertyChanged(nameof(StatusText));
                 _onChanged?.Invoke(new DocumentPackageCheckboxChange
                 {
                     DocumentName = Name,
@@ -140,6 +141,7 @@ namespace Win11DesktopApp.ViewModels
                 _status.IsScanned = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsComplete));
+                OnPropertyChanged(nameof(StatusText));
                 _onChanged?.Invoke(new DocumentPackageCheckboxChange
                 {
                     DocumentName = Name,
@@ -245,6 +247,7 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(HasNote));
             OnPropertyChanged(nameof(ShowNotePreview));
             OnPropertyChanged(nameof(IsComplete));
+            OnPropertyChanged(nameof(StatusText));
             IsEditing = false;
         }
 
@@ -261,6 +264,26 @@ namespace Win11DesktopApp.ViewModels
                 return true;
             }
         }
+
+        /// <summary>Short readable state, limited to what this document actually tracks.</summary>
+        public string StatusText
+        {
+            get
+            {
+                var key = (ShowPresence, ShowScanned, _status.IsPresent, _status.IsScanned) switch
+                {
+                    (false, false, _, _) => null,
+                    (true, true, true, true) => "DetPackageStatusAllDone",
+                    (true, true, true, false) => "DetPackageStatusNoScan",
+                    (true, true, false, true) => "DetPackageStatusNoOriginal",
+                    (true, _, false, _) => "DetPackageStatusMissing",
+                    (true, false, true, _) => "DetPackageStatusPresent",
+                    (false, true, _, true) => "DetPackageStatusScanned",
+                    (false, true, _, false) => "DetPackageStatusNoScan"
+                };
+                return key == null ? string.Empty : Res(key) ?? string.Empty;
+            }
+        }
     }
 
     public sealed class DocumentPackageFirmSectionViewModel : ViewModelBase
@@ -269,14 +292,31 @@ namespace Win11DesktopApp.ViewModels
             string firmName,
             bool isCurrent,
             IEnumerable<DocumentPackageItemViewModel> items,
-            bool isRetired = false)
+            bool isRetired = false,
+            string periodStart = "",
+            string periodEnd = "",
+            bool isClosedPeriod = false)
         {
             FirmName = firmName;
             IsCurrent = isCurrent;
             IsRetired = isRetired;
+            IsClosedPeriod = isClosedPeriod;
+            PeriodText = BuildPeriodText(periodStart, periodEnd, isClosedPeriod);
             Items = new ObservableCollection<DocumentPackageItemViewModel>(items);
         }
 
+        private static string BuildPeriodText(string periodStart, string periodEnd, bool isClosedPeriod)
+        {
+            var dates = new[] { periodStart, periodEnd }.Where(date => !string.IsNullOrWhiteSpace(date)).ToList();
+            if (dates.Count > 0)
+                return string.Join(" – ", dates);
+
+            return isClosedPeriod ? Res("DetDocumentPackagePreviousPeriod") : string.Empty;
+        }
+
+        public bool IsClosedPeriod { get; }
+        public string PeriodText { get; }
+        public bool HasPeriodText => !string.IsNullOrWhiteSpace(PeriodText);
         public string FirmName { get; }
         public bool IsCurrent { get; }
         public bool IsRetired { get; }
@@ -334,6 +374,9 @@ namespace Win11DesktopApp.ViewModels
                     return hint;
                 }
 
+                if (IsClosedPeriod)
+                    return Res("DetDocumentPackagePeriodHint");
+
                 var historyHint = Res("DetDocumentPackageHistoryHint");
                 if (string.IsNullOrWhiteSpace(historyHint) || historyHint == "DetDocumentPackageHistoryHint")
                     historyHint = "Тільки перегляд — дані з попередньої фірми.";
@@ -341,25 +384,67 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        public double ProgressFraction => TotalCount == 0 ? 0 : (double)CompletedCount / TotalCount;
+        public string CountText => $"{CompletedCount}/{TotalCount}";
+        public bool IsAllComplete => TotalCount > 0 && CompletedCount == TotalCount;
+
         public void NotifyProgressChanged()
         {
             OnPropertyChanged(nameof(CompletedCount));
             OnPropertyChanged(nameof(ProgressText));
+            OnPropertyChanged(nameof(ProgressFraction));
+            OnPropertyChanged(nameof(CountText));
+            OnPropertyChanged(nameof(IsAllComplete));
         }
     }
 
-    public sealed class CustomDocumentFirmSectionViewModel
+    public sealed class CustomDocumentFirmSectionViewModel : ViewModelBase
     {
-        public CustomDocumentFirmSectionViewModel(
+        private readonly Action<bool>? _onExpandedChanged;
+        private readonly bool _isCollapsible;
+        private bool _isExpanded;
+
+        internal CustomDocumentFirmSectionViewModel(
             string firmName,
             bool isCurrent,
             IEnumerable<CustomSignedDocument> documents,
-            bool showHeader)
+            bool showHeader,
+            CustomDocumentPeriodGroup? period = null,
+            bool isCollapsible = false,
+            bool isExpanded = false,
+            Action<bool>? onExpandedChanged = null)
         {
             FirmName = firmName;
             IsCurrent = isCurrent;
             ShowHeader = showHeader;
             Documents = new ObservableCollection<CustomSignedDocument>(documents);
+            _isCollapsible = isCollapsible;
+            _isExpanded = isExpanded;
+            _onExpandedChanged = onExpandedChanged;
+            HasPeriod = period != null;
+            PeriodTitle = period == null
+                ? string.Empty
+                : Res(period.IsOpen ? "DetCustomDocCurrentPeriod" : "DetDocumentPackagePreviousPeriod");
+            PeriodRangeText = period == null ? string.Empty : BuildRangeText(period);
+            PeriodCountText = string.Format(Res("DetCustomDocPeriodCount"), Documents.Count);
+            ToggleExpandedCommand = new RelayCommand(_ =>
+            {
+                IsExpanded = !IsExpanded;
+                _onExpandedChanged?.Invoke(IsExpanded);
+            });
+        }
+
+        private static string BuildRangeText(CustomDocumentPeriodGroup period)
+        {
+            if (period.IsOpen)
+            {
+                return string.IsNullOrWhiteSpace(period.PeriodStart)
+                    ? string.Empty
+                    : string.Format(Res("DetCustomDocPeriodFrom"), period.PeriodStart);
+            }
+
+            return string.Join(" – ", new[] { period.PeriodStart, period.PeriodEnd }
+                .Where(date => !string.IsNullOrWhiteSpace(date)));
         }
 
         public string FirmName { get; }
@@ -367,6 +452,25 @@ namespace Win11DesktopApp.ViewModels
         public bool ShowHeader { get; }
         public bool ShowHint => !IsCurrent;
         public ObservableCollection<CustomSignedDocument> Documents { get; }
+
+        public bool HasPeriod { get; }
+        public string PeriodTitle { get; }
+        public string PeriodRangeText { get; }
+        public string PeriodCountText { get; }
+        public ICommand ToggleExpandedCommand { get; }
+        public bool ShowPeriodHeader => HasPeriod && !_isCollapsible;
+        public bool ShowCollapsedHeader => HasPeriod && _isCollapsible;
+        public bool ShowDocuments => !_isCollapsible || IsExpanded;
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            private set
+            {
+                if (SetProperty(ref _isExpanded, value))
+                    OnPropertyChanged(nameof(ShowDocuments));
+            }
+        }
 
         public string HeaderText
         {
@@ -1474,6 +1578,27 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _totalHoursAll, value);
         }
 
+        private int _salaryMonthCount;
+        public int SalaryMonthCount
+        {
+            get => _salaryMonthCount;
+            set => SetProperty(ref _salaryMonthCount, value);
+        }
+
+        private decimal _averageMonthlySalary;
+        public decimal AverageMonthlySalary
+        {
+            get => _averageMonthlySalary;
+            set => SetProperty(ref _averageMonthlySalary, value);
+        }
+
+        private IReadOnlyList<double> _salaryChartValues = Array.Empty<double>();
+        public IReadOnlyList<double> SalaryChartValues
+        {
+            get => _salaryChartValues;
+            set => SetProperty(ref _salaryChartValues, value);
+        }
+
         private ObservableCollection<SalaryMonthDisplay> _salaryMonthDisplays = new();
         public ObservableCollection<SalaryMonthDisplay> SalaryMonthDisplays
         {
@@ -1879,6 +2004,7 @@ namespace Win11DesktopApp.ViewModels
 
         // Export PDF
         public ICommand ExportProfilePdfCommand { get; }
+        public ICommand ExportDocumentsPdfCommand { get; }
 
         public EmployeeDetailsViewModel(
             string firmName,
@@ -2064,6 +2190,9 @@ namespace Win11DesktopApp.ViewModels
                 },
                 o => o is EmployeeHistoryEntry && !IsReadOnlyMode);
             ExportProfilePdfCommand = new RelayCommand(o => ExportProfilePdf());
+            ExportDocumentsPdfCommand = new AsyncRelayCommand(
+                _ => ExportDocumentsPdfAsync(),
+                _ => GetDocumentsForPdf().Count > 0);
             AIValidateCommand = new AsyncRelayCommand(_ => RunAIValidationAsync(), _ => !IsAIValidating);
             CloseAIValidationCommand = new RelayCommand(o => IsAIValidationOpen = false);
             ApplyAISuggestionCommand = new AsyncRelayCommand(
@@ -3207,7 +3336,8 @@ namespace Win11DesktopApp.ViewModels
                         activeTemplateIds.Add(templateId);
 
                         var status = statuses.FirstOrDefault(s =>
-                            string.Equals(s.FirmName, _firmName, StringComparison.OrdinalIgnoreCase)
+                            !s.IsPeriodClosed
+                            && string.Equals(s.FirmName, _firmName, StringComparison.OrdinalIgnoreCase)
                             && string.Equals(s.TemplateId, templateId, StringComparison.OrdinalIgnoreCase));
 
                         if (status == null)
@@ -3248,7 +3378,8 @@ namespace Win11DesktopApp.ViewModels
                 if (!string.IsNullOrWhiteSpace(_firmName))
                 {
                     var retiredStatuses = statuses
-                        .Where(s => string.Equals(s.FirmName, _firmName, StringComparison.OrdinalIgnoreCase)
+                        .Where(s => !s.IsPeriodClosed
+                                    && string.Equals(s.FirmName, _firmName, StringComparison.OrdinalIgnoreCase)
                                     && !string.IsNullOrWhiteSpace(s.NameSnapshot)
                                     && !activeTemplateIds.Contains(s.TemplateId ?? string.Empty))
                         .ToList();
@@ -3262,48 +3393,19 @@ namespace Win11DesktopApp.ViewModels
                     }
                 }
 
-                // Previous firms — read-only snapshot history, never deleted.
-                var historyFirmNames = statuses
-                    .Where(s => !string.IsNullOrWhiteSpace(s.FirmName)
-                                && !string.Equals(s.FirmName, _firmName, StringComparison.OrdinalIgnoreCase)
-                                && !string.IsNullOrWhiteSpace(s.NameSnapshot))
-                    .Select(s => s.FirmName.Trim())
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
-                    .ToList();
-
-                // Prefer FirmHistory order when available.
-                var historyOrder = (Data.FirmHistory ?? new List<FirmHistoryEntry>())
-                    .Select(entry => entry.FirmName?.Trim())
-                    .Where(name => !string.IsNullOrWhiteSpace(name))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-                if (historyOrder.Count > 0)
+                // Previous firms and closed work periods — read-only history, never deleted.
+                foreach (var group in DocumentPackagePeriods.BuildHistory(statuses, _firmName, Data.FirmHistory))
                 {
-                    historyFirmNames = historyFirmNames
-                        .OrderBy(name =>
-                        {
-                            var index = historyOrder.FindIndex(h =>
-                                string.Equals(h, name, StringComparison.OrdinalIgnoreCase));
-                            return index >= 0 ? index : int.MaxValue;
-                        })
-                        .ThenBy(name => name, StringComparer.CurrentCultureIgnoreCase)
-                        .ToList();
-                }
-
-                foreach (var firmName in historyFirmNames)
-                {
-                    var firmStatuses = statuses
-                        .Where(s => string.Equals(s.FirmName, firmName, StringComparison.OrdinalIgnoreCase)
-                                    && !string.IsNullOrWhiteSpace(s.NameSnapshot))
-                        .ToList();
-                    if (firmStatuses.Count == 0)
-                        continue;
-
-                    var historyItems = firmStatuses
+                    var historyItems = group.Statuses
                         .Select(status => new DocumentPackageItemViewModel(status, isReadOnly: true))
                         .ToList();
-                    sections.Add(new DocumentPackageFirmSectionViewModel(firmName, isCurrent: false, historyItems));
+                    sections.Add(new DocumentPackageFirmSectionViewModel(
+                        group.FirmName,
+                        isCurrent: false,
+                        historyItems,
+                        periodStart: group.PeriodStart,
+                        periodEnd: group.PeriodEnd,
+                        isClosedPeriod: group.IsClosedPeriod));
                 }
 
                 DocumentPackageSections = new ObservableCollection<DocumentPackageFirmSectionViewModel>(sections);
@@ -5397,6 +5499,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
         // ---- Custom Signed Documents methods ----
 
+        private readonly HashSet<string> _expandedCustomDocPeriods = new(StringComparer.OrdinalIgnoreCase);
+
         private void LoadCustomDocuments()
         {
             Data.CustomDocuments ??= new List<CustomSignedDocument>();
@@ -5426,16 +5530,11 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 }, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            const bool showHeaders = true;
-
             var sections = new List<CustomDocumentFirmSectionViewModel>();
             var currentGroup = groups.FirstOrDefault(g =>
                 string.Equals(g.Key, currentFirm, StringComparison.OrdinalIgnoreCase));
             if (currentGroup != null)
-            {
-                sections.Add(new CustomDocumentFirmSectionViewModel(
-                    currentFirm, isCurrent: true, currentGroup, showHeaders));
-            }
+                AddCustomDocumentPeriodSections(sections, currentFirm, isCurrent: true, currentGroup);
 
             var historyOrder = (Data.FirmHistory ?? new List<FirmHistoryEntry>())
                 .Select(entry => entry.FirmName?.Trim())
@@ -5458,11 +5557,52 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             foreach (var key in otherKeys)
             {
                 var group = groups.First(g => string.Equals(g.Key, key, StringComparison.OrdinalIgnoreCase));
-                sections.Add(new CustomDocumentFirmSectionViewModel(
-                    key, isCurrent: false, group, showHeader: true));
+                AddCustomDocumentPeriodSections(sections, key, isCurrent: false, group);
             }
 
             return sections;
+        }
+
+        // One period: same plain section as before. Several: newest open, older ones collapsed.
+        private void AddCustomDocumentPeriodSections(
+            List<CustomDocumentFirmSectionViewModel> sections,
+            string firmName,
+            bool isCurrent,
+            IEnumerable<CustomSignedDocument> documents)
+        {
+            var periods = CustomDocumentPeriods.Split(
+                documents,
+                firmName,
+                Data.FirmHistory,
+                hasOpenPeriod: isCurrent && !IsArchiveMode,
+                Data.StartDate ?? string.Empty);
+
+            if (periods.Count <= 1)
+            {
+                sections.Add(new CustomDocumentFirmSectionViewModel(firmName, isCurrent, documents, showHeader: true));
+                return;
+            }
+
+            for (var index = 0; index < periods.Count; index++)
+            {
+                var period = periods[index];
+                var key = $"{firmName}|{period.PeriodStart}|{period.PeriodEnd}";
+                sections.Add(new CustomDocumentFirmSectionViewModel(
+                    firmName,
+                    isCurrent,
+                    period.Documents,
+                    showHeader: index == 0,
+                    period,
+                    isCollapsible: index > 0,
+                    isExpanded: _expandedCustomDocPeriods.Contains(key),
+                    onExpandedChanged: expanded =>
+                    {
+                        if (expanded)
+                            _expandedCustomDocPeriods.Add(key);
+                        else
+                            _expandedCustomDocPeriods.Remove(key);
+                    }));
+            }
         }
 
         private void CloseCustomDocDialog()

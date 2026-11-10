@@ -193,6 +193,80 @@ namespace Win11DesktopApp.ViewModels
             return string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
         }
 
+        // Mirrors the Documents tab, so the file holds exactly what the user sees there.
+        private List<EmployeeDocumentPdfSource> GetDocumentsForPdf()
+        {
+            var sources = new List<EmployeeDocumentPdfSource>();
+
+            void Add(string name, string? path)
+            {
+                if (!string.IsNullOrWhiteSpace(path))
+                    sources.Add(new EmployeeDocumentPdfSource(name, path));
+            }
+
+            Add(Res("DetDocPassport"), PassportFilePath);
+            if (UsesPassportPage2SecondaryDocument || ShowIdCardSecondSideCard)
+                Add(SecondaryDocumentDisplayName, PassportPage2FilePath);
+            if (ShowVisaDocumentCard)
+            {
+                Add(Res("DetDocVisa"), VisaFilePath);
+                if (!string.IsNullOrWhiteSpace(Data.Files?.VisaPage2))
+                    Add(Res("DetDocVisa"), BuildPath(Data.Files.VisaPage2));
+            }
+
+            if (!string.Equals(Data.EmployeeType, "passport_only", StringComparison.OrdinalIgnoreCase))
+                Add(Res("DetDocInsurance"), InsuranceFilePath);
+            if (IsWorkPermitType)
+                Add(Res("DetDocWorkPermit"), WorkPermitFilePath);
+            return sources;
+        }
+
+        private async Task ExportDocumentsPdfAsync()
+        {
+            if (!PolicyService.EnsureExportsAllowed("Експорт документів працівника в PDF"))
+                return;
+
+            var sources = GetDocumentsForPdf();
+            if (sources.Count == 0)
+                return;
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "PDF|*.pdf",
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                FileName = SanitizeFileName(string.Format(
+                    DocRes("DetDocumentsPdfFileNameFmt"),
+                    $"{Data.LastName} {Data.FirstName}".Trim()))
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var outputPath = dialog.FileName;
+            try
+            {
+                var result = await Task.Run(() => EmployeeDocumentsPdfService.Build(sources, outputPath));
+                if (result.IncludedCount == 0)
+                {
+                    ToastService.Instance.Warning(Res("MsgDocumentsPdfEmpty"));
+                    return;
+                }
+
+                _activityLogService.Log("ExportPdf", "Export", _firmName, FullName,
+                    $"Експортовано документи {FullName} → PDF",
+                    details: $"Фірма: {_firmName}; Документів: {result.IncludedCount}; Файл: {Path.GetFileName(outputPath)}",
+                    employeeFolder: _employeeFolder);
+
+                if (result.SkippedNames.Count > 0)
+                    ToastService.Instance.Warning(string.Format(Res("MsgDocumentsPdfPartialFmt"), string.Join(", ", result.SkippedNames)));
+                else
+                    ToastService.Instance.Success(Res("MsgPdfSaved"));
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.Report("ExportDocumentsPdfAsync", ex, ErrorSeverity.Error);
+            }
+        }
+
         private void ExportProfilePdf()
         {
             if (!PolicyService.EnsureExportsAllowed("Експорт профілю в PDF"))

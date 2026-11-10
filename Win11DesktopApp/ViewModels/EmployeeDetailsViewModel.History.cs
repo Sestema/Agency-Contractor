@@ -77,8 +77,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 SalaryHistoryEntries = new ObservableCollection<SalaryHistoryRecord>();
                 HasSalaryHistory = false;
-                TotalSalaryEarned = 0;
-                TotalHoursAll = 0;
+                ApplySalarySummary(Array.Empty<SalaryHistoryRecord>());
                 SalaryMonthDisplays = new ObservableCollection<SalaryMonthDisplay>();
                 HasAdvances = false;
                 TotalAdvances = 0;
@@ -90,8 +89,7 @@ namespace Win11DesktopApp.ViewModels
                 var records = _financeService.LoadSalaryHistory(_employeeFolder);
                 SalaryHistoryEntries = new ObservableCollection<SalaryHistoryRecord>(records);
                 HasSalaryHistory = SalaryHistoryEntries.Count > 0;
-                TotalSalaryEarned = records.Sum(r => r.NetSalary);
-                TotalHoursAll = records.Sum(r => r.HoursWorked);
+                ApplySalarySummary(records);
 
                 var advances = _financeService.GetAllAdvancesForEmployee(_employeeFolder);
                 HasAdvances = advances.Count > 0;
@@ -188,6 +186,12 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 displays.Reverse();
+                for (var i = 0; i < displays.Count; i++)
+                {
+                    displays[i].ShowFirmDivider = !string.IsNullOrWhiteSpace(displays[i].FirmName)
+                        && (i == 0 || !string.Equals(displays[i].FirmName, displays[i - 1].FirmName, StringComparison.OrdinalIgnoreCase));
+                }
+
                 SalaryMonthDisplays = new ObservableCollection<SalaryMonthDisplay>(displays);
             }
             catch (Exception ex)
@@ -195,12 +199,28 @@ namespace Win11DesktopApp.ViewModels
                 LoggingService.LogError("EmployeeDetailsViewModel.LoadSalaryHistory", ex);
                 SalaryHistoryEntries = new ObservableCollection<SalaryHistoryRecord>();
                 HasSalaryHistory = false;
-                TotalSalaryEarned = 0;
-                TotalHoursAll = 0;
+                ApplySalarySummary(Array.Empty<SalaryHistoryRecord>());
                 SalaryMonthDisplays = new ObservableCollection<SalaryMonthDisplay>();
                 HasAdvances = false;
                 TotalAdvances = 0;
             }
+        }
+
+        // A month paid by two firms counts once; the chart shows the last 12 calendar months.
+        private void ApplySalarySummary(IReadOnlyCollection<SalaryHistoryRecord> records)
+        {
+            var monthTotals = records
+                .GroupBy(r => (r.Year, r.Month))
+                .OrderBy(g => g.Key.Year)
+                .ThenBy(g => g.Key.Month)
+                .Select(g => g.Sum(r => r.NetSalary))
+                .ToList();
+
+            TotalSalaryEarned = records.Sum(r => r.NetSalary);
+            TotalHoursAll = records.Sum(r => r.HoursWorked);
+            SalaryMonthCount = monthTotals.Count;
+            AverageMonthlySalary = monthTotals.Count == 0 ? 0 : TotalSalaryEarned / monthTotals.Count;
+            SalaryChartValues = monthTotals.TakeLast(12).Select(total => (double)total).ToArray();
         }
 
         private static bool TryParseYearMonthKey(string key, out int year, out int month)

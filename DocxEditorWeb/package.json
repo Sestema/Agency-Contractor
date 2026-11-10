@@ -10,9 +10,9 @@
     "build": "tsc --noEmit && vite build"
   },
   "dependencies": {
-    "@docx-editor.dev/core": "2.35.0",
-    "@docx-editor.dev/i18n": "2.35.0",
-    "@docx-editor.dev/react": "2.35.0",
+    "@docx-editor.dev/core": "2.36.0",
+    "@docx-editor.dev/i18n": "2.36.0",
+    "@docx-editor.dev/react": "2.36.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

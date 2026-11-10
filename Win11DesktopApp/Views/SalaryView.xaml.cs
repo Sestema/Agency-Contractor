@@ -52,6 +52,13 @@ namespace Win11DesktopApp.Views
 
         private void SalaryView_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.Escape && DataContext is SalaryViewModel { IsMonthPickerOpen: true } pickerVm)
+            {
+                pickerVm.IsMonthPickerOpen = false;
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 CommitPendingGridEdits();

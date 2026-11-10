@@ -3042,6 +3042,7 @@ namespace Win11DesktopApp.Services
 
             if (!isUndo)
             {
+                DocumentPackagePeriods.CloseOpenPeriods(data);
                 data.StartDate = newStartDate;
                 data.ContractSignDate = newContractSignDate;
                 data.PositionTag = positionTag;

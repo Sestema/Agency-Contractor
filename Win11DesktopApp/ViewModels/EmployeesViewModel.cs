@@ -11,7 +11,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
-using ClosedXML.Excel;
 using Win11DesktopApp.Models;
 using EmployeeModels = Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Converters;
@@ -833,7 +832,7 @@ namespace Win11DesktopApp.ViewModels
                 },
                 o => o is Tuple<EmployeeModels.EmployeeSummary, string>);
 
-            ExportToExcelCommand = new RelayCommand(o => ExportToExcel(), o => _allEmployees.Count > 0);
+            ExportToExcelCommand = new AsyncRelayCommand(_ => ExportToExcelAsync(), _ => _allEmployees.Count > 0);
 
             ToggleSelectionModeCommand = new RelayCommand(o =>
             {
@@ -1735,12 +1734,14 @@ namespace Win11DesktopApp.ViewModels
                 {
                     var templateId = template.Id ?? string.Empty;
                     var status = statuses.FirstOrDefault(s =>
-                        string.Equals(s.FirmName, firmName, StringComparison.OrdinalIgnoreCase)
+                        !s.IsPeriodClosed
+                        && string.Equals(s.FirmName, firmName, StringComparison.OrdinalIgnoreCase)
                         && string.Equals(s.TemplateId, templateId, StringComparison.OrdinalIgnoreCase));
 
                     // Legacy rows without FirmName still count for the current firm.
                     status ??= statuses.FirstOrDefault(s =>
-                        string.IsNullOrWhiteSpace(s.FirmName)
+                        !s.IsPeriodClosed
+                        && string.IsNullOrWhiteSpace(s.FirmName)
                         && string.Equals(s.TemplateId, templateId, StringComparison.OrdinalIgnoreCase));
 
                     var docName = string.IsNullOrWhiteSpace(template.Name)
@@ -1889,94 +1890,78 @@ namespace Win11DesktopApp.ViewModels
                 BatchAICheckOnlySelected = IsSelectionMode && SelectedCount > 0;
         }
 
-        private void ExportToExcel()
+        private async Task ExportToExcelAsync()
         {
             if (!PolicyService.EnsureExportsAllowed("Експорт працівників в Excel"))
                 return;
-            if (_company == null) return;
+            if (_company == null && !_showAllCompanies)
+                return;
+
+            var allFirmsLabel = DocRes("ExportAllFirms");
+            var fileLabel = _company?.Name ?? allFirmsLabel.Replace(' ', '_');
+            var dialog = new SaveFileDialog
+            {
+                Filter = "Excel|*.xlsx",
+                FileName = $"{DocRes("ExportEmployees")}_{fileLabel}_{DateTime.Now:yyyyMMdd}.xlsx"
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var filePath = dialog.FileName;
+
+            // Everything that needs the UI thread (resources, company access) is read before the background work.
+            var labels = new EmployeeExportLabels(
+                DocRes("ExportEmployees"),
+                new[]
+                {
+                    DocRes("ExportColFirstName"), DocRes("ExportColLastName"), DocRes("ExportColPosition"), DocRes("ExportColPhone"), "Email",
+                    DocRes("ExportColPassportNum"), DocRes("ExportColPassportExp"), DocRes("ExportColVisaNum"), DocRes("ExportColVisaExp"),
+                    DocRes("ExportColInsNum"), DocRes("ExportColInsExp"), DocRes("ExportColContractType"),
+                    DocRes("ExportColStartDate"), DocRes("ExportColStatus")
+                },
+                DocRes("ExportColFirm"));
+            var employees = (PolicyService.IsCompanyDataScopeRestricted
+                ? _allEmployees.Where(CanAccessEmployee)
+                : _allEmployees).ToList();
+            var includeFirmColumn = _showAllCompanies;
+
             try
             {
                 IsLoading = true;
-                var dialog = new SaveFileDialog
+                var result = await Task.Run(() => EmployeeExcelExporter.Export(
+                    employees,
+                    _employeeService.LoadEmployeeData,
+                    labels,
+                    includeFirmColumn,
+                    filePath));
+
+                if (result.SkippedNames.Count > 0)
                 {
-                    Filter = "Excel|*.xlsx",
-                    FileName = $"{DocRes("ExportEmployees")}_{_company.Name}_{DateTime.Now:yyyyMMdd}.xlsx"
-                };
-                if (dialog.ShowDialog() != true) return;
-
-                using var workbook = new XLWorkbook();
-                var ws = workbook.Worksheets.Add(DocRes("ExportEmployees"));
-
-                string[] headers = { DocRes("ExportColFirstName"), DocRes("ExportColLastName"), DocRes("ExportColPosition"), DocRes("ExportColPhone"), "Email",
-                    DocRes("ExportColPassportNum"), DocRes("ExportColPassportExp"), DocRes("ExportColVisaNum"), DocRes("ExportColVisaExp"),
-                    DocRes("ExportColInsNum"), DocRes("ExportColInsExp"), DocRes("ExportColContractType"),
-                    DocRes("ExportColStartDate"), DocRes("ExportColStatus") };
-
-                for (int i = 0; i < headers.Length; i++)
-                    ws.Cell(1, i + 1).Value = headers[i];
-
-                var headerRange = ws.Range(1, 1, 1, headers.Length);
-                headerRange.Style.Font.Bold = true;
-                headerRange.Style.Fill.BackgroundColor = XLColor.CornflowerBlue;
-                headerRange.Style.Font.FontColor = XLColor.White;
-
-                int row = 2;
-                foreach (var emp in _allEmployees)
-                {
-                    var data = _employeeService.LoadEmployeeData(emp.EmployeeFolder);
-                    if (data == null) continue;
-
-                    ws.Cell(row, 1).Value = data.FirstName;
-                    ws.Cell(row, 2).Value = data.LastName;
-                    ws.Cell(row, 3).Value = data.PositionTag;
-                    ws.Cell(row, 4).Value = data.Phone;
-                    ws.Cell(row, 5).Value = data.Email;
-                    ws.Cell(row, 6).Value = data.PassportNumber;
-                    ws.Cell(row, 7).Value = data.PassportExpiry;
-                    ws.Cell(row, 8).Value = data.VisaNumber;
-                    ws.Cell(row, 9).Value = data.VisaExpiry;
-                    ws.Cell(row, 10).Value = data.InsuranceNumber;
-                    ws.Cell(row, 11).Value = data.InsuranceExpiry;
-                    ws.Cell(row, 12).Value = data.ContractType;
-                    ws.Cell(row, 13).Value = data.StartDate;
-                    ws.Cell(row, 14).Value = data.Status;
-
-                    HighlightIfExpired(ws.Cell(row, 7));
-                    HighlightIfExpired(ws.Cell(row, 9));
-                    HighlightIfExpired(ws.Cell(row, 11));
-
-                    row++;
+                    var names = string.Join(", ", result.SkippedNames.Take(5));
+                    ToastService.Instance.Warning(string.Format(
+                        GetString("MsgExportPartialFmt") ?? "Експортовано {0} із {1}. Не вдалося прочитати: {2}",
+                        result.ExportedCount,
+                        employees.Count,
+                        names));
                 }
 
-                ws.Columns().AdjustToContents();
-                workbook.SaveAs(dialog.FileName);
+                if (result.ExportedCount == 0)
+                    return;
+
+                var firmLabel = _company?.Name ?? allFirmsLabel;
                 _activityLogService.Log("ExportExcel", "Export", _company?.Name ?? "", "",
-                    $"Експортовано список працівників {_company?.Name} → Excel",
-                    details: $"Фірма: {_company?.Name}; Працівників: {Employees.Count}; Файл: {Path.GetFileName(dialog.FileName)}");
-                Process.Start(new ProcessStartInfo { FileName = dialog.FileName, UseShellExecute = true });
+                    $"Експортовано список працівників {firmLabel} → Excel",
+                    details: $"Фірма: {firmLabel}; Працівників: {result.ExportedCount}; Файл: {Path.GetFileName(filePath)}");
+                Process.Start(new ProcessStartInfo { FileName = filePath, UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                StatusMessage = string.Format(Res("MsgExportError"), ex.Message);
+                LoggingService.LogError("EmployeesViewModel.ExportToExcelAsync", ex);
+                ToastService.Instance.Error(string.Format(Res("MsgExportError"), ex.Message));
             }
             finally
             {
                 IsLoading = false;
-            }
-        }
-
-        private static void HighlightIfExpired(IXLCell cell)
-        {
-            var val = cell.GetString();
-            var severity = DateParsingHelper.GetSeverity(val);
-            if (severity == "Expired" || severity == "Critical")
-            {
-                cell.Style.Font.FontColor = XLColor.Red;
-                cell.Style.Font.Bold = true;
-            }
-            else if (severity == "Warning")
-            {
-                cell.Style.Font.FontColor = XLColor.OrangeRed;
             }
         }
 

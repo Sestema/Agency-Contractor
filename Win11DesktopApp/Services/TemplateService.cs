@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.IO.Compression;
 using System.Threading;
@@ -20,7 +19,6 @@ namespace Win11DesktopApp.Services
         private readonly TagCatalogService? _tagCatalogService;
         private readonly FolderService _folderService;
         private const string LogFileName = "template-errors.log";
-        private const string EmptyTemplateRtf = @"{\rtf1\ansi\deff0{\fonttbl{\f0 Segoe UI;}}\fs22\pard\f0\par}";
 
         public TemplateService(AppSettingsService appSettingsService, FolderService folderService, TagCatalogService? tagCatalogService = null)
         {
@@ -127,12 +125,6 @@ namespace Win11DesktopApp.Services
 
             SafeFileService.WriteJsonAtomic(indexFile, index);
 
-            // Create versions folder
-            Directory.CreateDirectory(Path.Combine(templateFolder, "versions"));
-
-            // Create preview folder
-            Directory.CreateDirectory(Path.Combine(templateFolder, "preview"));
-
             return new TemplateEntry
             {
                 Name = templateName,
@@ -146,7 +138,7 @@ namespace Win11DesktopApp.Services
         }
 
         /// <summary>
-        /// Creates a template without a source file (for DOCX — user will use built-in editor).
+        /// Creates an empty native DOCX template for the built-in editor.
         /// </summary>
         public TemplateEntry? AddTemplateWithoutFile(string firmName, string templateName, string description, string format)
         {
@@ -166,11 +158,9 @@ namespace Win11DesktopApp.Services
             }
             Directory.CreateDirectory(templateFolder);
 
-            // New DOCX templates start with an empty RTF so the editor can open immediately.
             var destFileName = "template.docx";
-            SafeFileService.WriteTextAtomic(Path.Combine(templateFolder, "content.rtf"), EmptyTemplateRtf);
+            WriteEmptyTemplateDocx(Path.Combine(templateFolder, destFileName));
 
-            // Create metadata.json
             var now = DateTime.Now;
             var metadata = new TemplateMetadata
             {
@@ -180,7 +170,8 @@ namespace Win11DesktopApp.Services
                 CreatedAt = now,
                 UpdatedAt = now,
                 TagsUsed = new List<string>(),
-                LayoutSource = TemplateLayoutSource.Editor
+                LayoutSource = TemplateLayoutSource.Editor,
+                EditorFormat = TemplateEditorFormat.Docx
             };
 
             SafeFileService.WriteJsonAtomic(Path.Combine(templateFolder, "metadata.json"), metadata);
@@ -195,7 +186,7 @@ namespace Win11DesktopApp.Services
                 {
                     index = SafeFileService.ReadJsonOrDefault(indexFile, new List<TemplateIndexEntry>());
                 }
-                catch (Exception ex) { LoggingService.LogError("TemplateService.AddTemplateFromRtf", ex); }
+                catch (Exception ex) { LoggingService.LogError("TemplateService.AddTemplateWithoutFile", ex); }
             }
 
             var templatesFolderName = Path.GetFileName(templatesRoot);
@@ -211,10 +202,6 @@ namespace Win11DesktopApp.Services
             index.Add(entry);
 
             SafeFileService.WriteJsonAtomic(indexFile, index);
-
-            // Create subfolders
-            Directory.CreateDirectory(Path.Combine(templateFolder, "versions"));
-            Directory.CreateDirectory(Path.Combine(templateFolder, "preview"));
 
             return new TemplateEntry
             {
@@ -289,9 +276,6 @@ namespace Win11DesktopApp.Services
 
             SafeFileService.WriteJsonAtomic(indexFile, index);
 
-            Directory.CreateDirectory(Path.Combine(templateFolder, "versions"));
-            Directory.CreateDirectory(Path.Combine(templateFolder, "preview"));
-
             return new TemplateEntry
             {
                 Name = templateName,
@@ -318,492 +302,34 @@ namespace Win11DesktopApp.Services
             return templateFolder;
         }
 
-        private static void SaveImportedDocxEditorContent(string sourceFilePath, string templateFolder)
+        private static void WriteEmptyTemplateDocx(string path)
         {
-            var document = BuildFlowDocumentFromDocx(sourceFilePath);
-            var range = new System.Windows.Documents.TextRange(document.ContentStart, document.ContentEnd);
-
-            using (var xamlStream = new MemoryStream())
+            using var buffer = new MemoryStream();
+            using (var document = WordprocessingDocument.Create(buffer, WordprocessingDocumentType.Document))
             {
-                range.Save(xamlStream, System.Windows.DataFormats.XamlPackage);
-                SafeFileService.WriteBytesAtomic(Path.Combine(templateFolder, "content.xamlpackage"), xamlStream.ToArray());
-            }
-
-            using (var rtfStream = new MemoryStream())
-            {
-                range.Save(rtfStream, System.Windows.DataFormats.Rtf);
-                SafeFileService.WriteBytesAtomic(Path.Combine(templateFolder, "content.rtf"), rtfStream.ToArray());
-            }
-        }
-
-        private static System.Windows.Documents.FlowDocument BuildFlowDocumentFromDocx(string sourceFilePath)
-        {
-            var flowDocument = new System.Windows.Documents.FlowDocument
-            {
-                FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
-                FontSize = 12,
-                PagePadding = new System.Windows.Thickness(96)
-            };
-
-            using var document = WordprocessingDocument.Open(sourceFilePath, false);
-            var body = document.MainDocumentPart?.Document?.Body;
-            if (body == null)
-                return flowDocument;
-
-            System.Windows.Documents.List? currentList = null;
-            string? currentListKey = null;
-
-            foreach (var child in body.ChildElements)
-            {
-                if (child is Paragraph paragraph)
-                {
-                    var listKey = GetListKey(paragraph);
-                    if (!string.IsNullOrEmpty(listKey))
-                    {
-                        if (currentList == null || !string.Equals(currentListKey, listKey, StringComparison.Ordinal))
+                var mainPart = document.AddMainDocumentPart();
+                mainPart.Document = new Document(new Body(
+                    new Paragraph(),
+                    new SectionProperties(
+                        new PageSize
                         {
-                            currentList = new System.Windows.Documents.List
-                            {
-                                MarkerStyle = GetTextMarkerStyle(document, paragraph),
-                                Margin = new System.Windows.Thickness(0, 0, 0, 6),
-                                Padding = new System.Windows.Thickness(24, 0, 0, 0)
-                            };
-                            flowDocument.Blocks.Add(currentList);
-                            currentListKey = listKey;
-                        }
-
-                        currentList.ListItems.Add(new System.Windows.Documents.ListItem(CreateFlowParagraph(paragraph)));
-                        continue;
-                    }
-
-                    currentList = null;
-                    currentListKey = null;
-                    flowDocument.Blocks.Add(CreateFlowParagraph(paragraph));
-                }
-                else if (child is Table table)
-                {
-                    currentList = null;
-                    currentListKey = null;
-                    flowDocument.Blocks.Add(CreateFlowTable(table));
-                }
+                            Width = 11906,
+                            Height = 16838,
+                            Orient = PageOrientationValues.Portrait
+                        },
+                        new PageMargin
+                        {
+                            Top = 1440,
+                            Right = (UInt32Value)1440U,
+                            Bottom = 1440,
+                            Left = (UInt32Value)1440U,
+                            Header = (UInt32Value)720U,
+                            Footer = (UInt32Value)720U
+                        })));
+                mainPart.Document.Save();
             }
 
-            return flowDocument;
-        }
-
-        private static System.Windows.Documents.Paragraph CreateFlowParagraph(Paragraph paragraph)
-        {
-            var result = new System.Windows.Documents.Paragraph
-            {
-                Margin = new System.Windows.Thickness(0, 0, 0, 8)
-            };
-
-            ApplyParagraphProperties(result, paragraph);
-
-            foreach (var run in paragraph.Elements<Run>())
-                AppendRunToParagraph(result, run);
-
-            if (!result.Inlines.Any())
-                result.Inlines.Add(new System.Windows.Documents.Run(string.Empty));
-
-            return result;
-        }
-
-        private static System.Windows.Documents.Table CreateFlowTable(Table table)
-        {
-            var result = new System.Windows.Documents.Table
-            {
-                CellSpacing = 0,
-                Margin = new System.Windows.Thickness(0, 8, 0, 8)
-            };
-
-            var maxColumns = table.Elements<TableRow>()
-                .Select(row => row.Elements<TableCell>().Count())
-                .DefaultIfEmpty(0)
-                .Max();
-            for (var i = 0; i < maxColumns; i++)
-                result.Columns.Add(new System.Windows.Documents.TableColumn());
-
-            var group = new System.Windows.Documents.TableRowGroup();
-            result.RowGroups.Add(group);
-
-            foreach (var sourceRow in table.Elements<TableRow>())
-            {
-                var row = new System.Windows.Documents.TableRow();
-                group.Rows.Add(row);
-
-                foreach (var sourceCell in sourceRow.Elements<TableCell>())
-                {
-                    var cell = new System.Windows.Documents.TableCell
-                    {
-                        BorderBrush = System.Windows.Media.Brushes.Gray,
-                        BorderThickness = new System.Windows.Thickness(0.5),
-                        Padding = new System.Windows.Thickness(6, 3, 6, 3)
-                    };
-
-                    var paragraphs = sourceCell.Elements<Paragraph>().ToList();
-                    if (paragraphs.Count == 0)
-                    {
-                        var text = string.Join(" ", sourceCell.Descendants<Text>().Select(t => t.Text));
-                        cell.Blocks.Add(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(text)));
-                    }
-                    else
-                    {
-                        foreach (var paragraph in paragraphs)
-                            cell.Blocks.Add(CreateFlowParagraph(paragraph));
-                    }
-
-                    row.Cells.Add(cell);
-                }
-            }
-
-            return result;
-        }
-
-        private static void ApplyParagraphProperties(System.Windows.Documents.Paragraph target, Paragraph source)
-        {
-            var props = source.ParagraphProperties;
-            var alignment = props?.Justification?.Val?.Value;
-            if (alignment == JustificationValues.Center)
-                target.TextAlignment = System.Windows.TextAlignment.Center;
-            else if (alignment == JustificationValues.Right)
-                target.TextAlignment = System.Windows.TextAlignment.Right;
-            else if (alignment == JustificationValues.Both)
-                target.TextAlignment = System.Windows.TextAlignment.Justify;
-            else
-                target.TextAlignment = System.Windows.TextAlignment.Left;
-
-            var ind = props?.Indentation;
-            var left = TryParseTwip(ind?.Left?.Value, out var leftTwip) ? TwipsToDeviceIndependentPixels(leftTwip) : 0;
-            var right = TryParseTwip(ind?.Right?.Value, out var rightTwip) ? TwipsToDeviceIndependentPixels(rightTwip) : 0;
-            target.Margin = new System.Windows.Thickness(left, target.Margin.Top, right, target.Margin.Bottom);
-
-            if (TryParseTwip(ind?.FirstLine?.Value, out var firstLine))
-                target.TextIndent = TwipsToDeviceIndependentPixels(firstLine);
-            else if (TryParseTwip(ind?.Hanging?.Value, out var hanging))
-                target.TextIndent = -TwipsToDeviceIndependentPixels(hanging);
-
-            var spacing = props?.SpacingBetweenLines;
-            if (TryParseTwip(spacing?.Before?.Value, out var before) || TryParseTwip(spacing?.After?.Value, out var after))
-            {
-                target.Margin = new System.Windows.Thickness(
-                    target.Margin.Left,
-                    TryParseTwip(spacing?.Before?.Value, out before) ? TwipsToDeviceIndependentPixels(before) : target.Margin.Top,
-                    target.Margin.Right,
-                    TryParseTwip(spacing?.After?.Value, out after) ? TwipsToDeviceIndependentPixels(after) : target.Margin.Bottom);
-            }
-        }
-
-        private static void AppendRunToParagraph(System.Windows.Documents.Paragraph paragraph, Run run)
-        {
-            foreach (var child in run.ChildElements)
-            {
-                if (child is Text text)
-                {
-                    var inline = new System.Windows.Documents.Run(text.Text);
-                    ApplyRunProperties(inline, run.RunProperties);
-                    paragraph.Inlines.Add(inline);
-                }
-                else if (child is TabChar)
-                {
-                    paragraph.Inlines.Add(new System.Windows.Documents.Run("\t"));
-                }
-                else if (child is Break)
-                {
-                    paragraph.Inlines.Add(new System.Windows.Documents.LineBreak());
-                }
-            }
-        }
-
-        private static void ApplyRunProperties(System.Windows.Documents.Run target, RunProperties? props)
-        {
-            if (props == null)
-                return;
-
-            if (props.Bold != null)
-                target.FontWeight = System.Windows.FontWeights.Bold;
-            if (props.Italic != null)
-                target.FontStyle = System.Windows.FontStyles.Italic;
-            if (props.Underline != null)
-                target.TextDecorations = System.Windows.TextDecorations.Underline;
-            if (int.TryParse(props.FontSize?.Val?.Value, out var halfPoints) && halfPoints > 0)
-                target.FontSize = Math.Max(1, halfPoints / 2.0 * 96.0 / 72.0);
-
-            var fontName = props.RunFonts?.Ascii?.Value
-                ?? props.RunFonts?.HighAnsi?.Value
-                ?? props.RunFonts?.ComplexScript?.Value;
-            if (!string.IsNullOrWhiteSpace(fontName))
-                target.FontFamily = new System.Windows.Media.FontFamily(fontName);
-        }
-
-        private static string GetListKey(Paragraph paragraph)
-        {
-            var numbering = paragraph.ParagraphProperties?.NumberingProperties;
-            var numId = numbering?.NumberingId?.Val?.Value;
-            if (numId == null)
-                return string.Empty;
-
-            var level = numbering?.NumberingLevelReference?.Val?.Value ?? 0;
-            return $"{numId}:{level}";
-        }
-
-        private static System.Windows.TextMarkerStyle GetTextMarkerStyle(WordprocessingDocument document, Paragraph paragraph)
-        {
-            var numbering = paragraph.ParagraphProperties?.NumberingProperties;
-            var numId = numbering?.NumberingId?.Val?.Value;
-            if (numId == null)
-                return System.Windows.TextMarkerStyle.Decimal;
-
-            var level = numbering?.NumberingLevelReference?.Val?.Value ?? 0;
-            var format = GetNumberingFormat(document, numId.Value, level)?.Value;
-            if (Equals(format, NumberFormatValues.Bullet))
-                return System.Windows.TextMarkerStyle.Disc;
-            if (Equals(format, NumberFormatValues.LowerLetter))
-                return System.Windows.TextMarkerStyle.LowerLatin;
-            if (Equals(format, NumberFormatValues.UpperLetter))
-                return System.Windows.TextMarkerStyle.UpperLatin;
-            if (Equals(format, NumberFormatValues.LowerRoman))
-                return System.Windows.TextMarkerStyle.LowerRoman;
-            if (Equals(format, NumberFormatValues.UpperRoman))
-                return System.Windows.TextMarkerStyle.UpperRoman;
-
-            return System.Windows.TextMarkerStyle.Decimal;
-        }
-
-        private static double TwipsToDeviceIndependentPixels(int twips)
-        {
-            return twips / 15.0;
-        }
-
-        private static string BuildRtfFromDocx(string sourceFilePath)
-        {
-            var builder = new StringBuilder();
-            builder.Append(@"{\rtf1\ansi\deff0{\fonttbl{\f0 Segoe UI;}{\f1 Arial;}{\f2 Calibri;}{\f3 Times New Roman;}}\fs22 ");
-
-            using var document = WordprocessingDocument.Open(sourceFilePath, false);
-            var body = document.MainDocumentPart?.Document?.Body;
-            var listCounters = new Dictionary<string, int>();
-            if (body != null)
-            {
-                foreach (var child in body.ChildElements)
-                {
-                    if (child is Paragraph paragraph)
-                    {
-                        AppendParagraphRtf(builder, document, paragraph, listCounters);
-                    }
-                    else if (child is Table table)
-                    {
-                        AppendTableAsParagraphs(builder, table);
-                    }
-                }
-            }
-
-            builder.Append('}');
-            return builder.ToString();
-        }
-
-        private static void AppendTableAsParagraphs(StringBuilder builder, Table table)
-        {
-            foreach (var row in table.Elements<TableRow>())
-            {
-                var cells = row.Elements<TableCell>()
-                    .Select(cell => string.Join(" ", cell.Descendants<Text>().Select(t => t.Text)))
-                    .Where(text => !string.IsNullOrWhiteSpace(text))
-                    .ToList();
-
-                if (cells.Count == 0)
-                    continue;
-
-                builder.Append(@"\pard ");
-                AppendEscapedRtf(builder, string.Join("    |    ", cells));
-                builder.Append(@"\par ");
-            }
-        }
-
-        private static void AppendParagraphRtf(
-            StringBuilder builder,
-            WordprocessingDocument document,
-            Paragraph paragraph,
-            Dictionary<string, int> listCounters)
-        {
-            var props = paragraph.ParagraphProperties;
-            builder.Append(@"\pard ");
-
-            var alignment = props?.Justification?.Val?.Value;
-            if (alignment == JustificationValues.Center)
-                builder.Append(@"\qc ");
-            else if (alignment == JustificationValues.Right)
-                builder.Append(@"\qr ");
-            else if (alignment == JustificationValues.Both)
-                builder.Append(@"\qj ");
-            else
-                builder.Append(@"\ql ");
-
-            var ind = props?.Indentation;
-            if (TryParseTwip(ind?.Left?.Value, out var left))
-                builder.Append(@"\li").Append(left).Append(' ');
-            if (TryParseTwip(ind?.Right?.Value, out var right))
-                builder.Append(@"\ri").Append(right).Append(' ');
-            if (TryParseTwip(ind?.FirstLine?.Value, out var firstLine))
-                builder.Append(@"\fi").Append(firstLine).Append(' ');
-            if (TryParseTwip(ind?.Hanging?.Value, out var hanging))
-                builder.Append(@"\fi-").Append(hanging).Append(' ');
-
-            var numberingPrefix = GetNumberingPrefix(document, paragraph, listCounters);
-            if (!string.IsNullOrEmpty(numberingPrefix))
-            {
-                builder.Append(@"\tx720 ");
-                AppendEscapedRtf(builder, numberingPrefix);
-                builder.Append(@"\tab ");
-            }
-
-            foreach (var run in paragraph.Elements<Run>())
-                AppendRunRtf(builder, run);
-
-            builder.Append(@"\par ");
-        }
-
-        private static void AppendRunRtf(StringBuilder builder, Run run)
-        {
-            var props = run.RunProperties;
-            var bold = props?.Bold != null;
-            var italic = props?.Italic != null;
-            var underline = props?.Underline != null;
-            var size = props?.FontSize?.Val?.Value;
-
-            if (bold) builder.Append(@"\b ");
-            if (italic) builder.Append(@"\i ");
-            if (underline) builder.Append(@"\ul ");
-            if (int.TryParse(size, out var halfPoints) && halfPoints > 0)
-                builder.Append(@"\fs").Append(halfPoints).Append(' ');
-
-            foreach (var text in run.Descendants<Text>())
-                AppendEscapedRtf(builder, text.Text);
-
-            foreach (var tab in run.Descendants<TabChar>())
-                builder.Append(@"\tab ");
-
-            foreach (var br in run.Descendants<Break>())
-                builder.Append(@"\line ");
-
-            if (underline) builder.Append(@"\ul0 ");
-            if (italic) builder.Append(@"\i0 ");
-            if (bold) builder.Append(@"\b0 ");
-        }
-
-        private static bool TryParseTwip(string? value, out int twip)
-        {
-            return int.TryParse(value, out twip);
-        }
-
-        private static string GetNumberingPrefix(
-            WordprocessingDocument document,
-            Paragraph paragraph,
-            Dictionary<string, int> listCounters)
-        {
-            var numbering = paragraph.ParagraphProperties?.NumberingProperties;
-            var numId = numbering?.NumberingId?.Val?.Value;
-            if (numId == null)
-                return string.Empty;
-
-            var level = numbering?.NumberingLevelReference?.Val?.Value ?? 0;
-            var key = $"{numId}:{level}";
-            listCounters.TryGetValue(key, out var current);
-            current++;
-            listCounters[key] = current;
-
-            var format = GetNumberingFormat(document, numId.Value, level);
-            var formatValue = format?.Value;
-            if (Equals(formatValue, NumberFormatValues.Bullet))
-                return "•";
-            if (Equals(formatValue, NumberFormatValues.LowerLetter))
-                return $"{ToLetters(current).ToLowerInvariant()}.";
-            if (Equals(formatValue, NumberFormatValues.UpperLetter))
-                return $"{ToLetters(current).ToUpperInvariant()}.";
-            if (Equals(formatValue, NumberFormatValues.LowerRoman))
-                return $"{ToRoman(current).ToLowerInvariant()}.";
-            if (Equals(formatValue, NumberFormatValues.UpperRoman))
-                return $"{ToRoman(current).ToUpperInvariant()}.";
-
-            return $"{current}.";
-        }
-
-        private static EnumValue<NumberFormatValues>? GetNumberingFormat(WordprocessingDocument document, int numId, int level)
-        {
-            var numberingPart = document.MainDocumentPart?.NumberingDefinitionsPart;
-            var numberingRoot = numberingPart?.Numbering;
-            if (numberingRoot == null)
-                return null;
-
-            var instance = numberingRoot.Elements<NumberingInstance>()
-                .FirstOrDefault(item => item.NumberID?.Value == numId);
-            var abstractNumId = instance?.AbstractNumId?.Val?.Value;
-            if (abstractNumId == null)
-                return null;
-
-            var abstractNumbering = numberingRoot.Elements<AbstractNum>()
-                .FirstOrDefault(item => item.AbstractNumberId?.Value == abstractNumId.Value);
-            var levelDefinition = abstractNumbering?.Elements<Level>()
-                .FirstOrDefault(item => item.LevelIndex?.Value == level);
-
-            return levelDefinition?.NumberingFormat?.Val;
-        }
-
-        private static string ToLetters(int number)
-        {
-            if (number <= 0)
-                return number.ToString();
-
-            var result = string.Empty;
-            while (number > 0)
-            {
-                number--;
-                result = (char)('A' + number % 26) + result;
-                number /= 26;
-            }
-
-            return result;
-        }
-
-        private static string ToRoman(int number)
-        {
-            if (number <= 0)
-                return number.ToString();
-
-            var map = new[]
-            {
-                (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"),
-                (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
-                (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")
-            };
-            var result = new StringBuilder();
-            foreach (var (value, symbol) in map)
-            {
-                while (number >= value)
-                {
-                    result.Append(symbol);
-                    number -= value;
-                }
-            }
-
-            return result.ToString();
-        }
-
-        private static void AppendEscapedRtf(StringBuilder builder, string? text)
-        {
-            if (string.IsNullOrEmpty(text))
-                return;
-
-            foreach (var ch in text)
-            {
-                if (ch == '\\') builder.Append(@"\\");
-                else if (ch == '{') builder.Append(@"\{");
-                else if (ch == '}') builder.Append(@"\}");
-                else if (ch == '\n') builder.Append(@"\line ");
-                else if (ch == '\r') { }
-                else if (ch > 127) builder.Append(@"\u").Append((short)ch).Append('?');
-                else builder.Append(ch);
-            }
+            SafeFileService.WriteBytesAtomic(path, buffer.ToArray());
         }
 
         public string? DetectTemplateFormat(string filePath)
@@ -1035,29 +561,47 @@ namespace Win11DesktopApp.Services
             return outputPath;
         }
 
-        public void RenameTemplate(string firmName, TemplateEntry template, string newName)
+        public TemplateRenameResult RenameTemplate(string firmName, TemplateEntry template, string newName)
         {
-            if (string.IsNullOrEmpty(_folderService.RootPath) || template == null || string.IsNullOrWhiteSpace(newName)) return;
+            if (string.IsNullOrEmpty(_folderService.RootPath) || template == null || string.IsNullOrWhiteSpace(newName))
+                return TemplateRenameResult.Renamed;
 
-            var templatesRoot = _folderService.GetTemplatesFolder(firmName);
-            var indexFile = Path.Combine(templatesRoot, "index.json");
-
-            if (File.Exists(indexFile))
-            {
-                var index = SafeFileService.ReadJsonOrDefault(indexFile, new List<TemplateIndexEntry>());
-                var item = index.FirstOrDefault(x => x.Path == template.FilePath);
-                if (item != null)
-                {
-                    item.Name = newName;
-                    item.Updated = DateTime.Now;
-                    SafeFileService.WriteJsonAtomic(indexFile, index);
-                }
-            }
-
+            newName = newName.Trim();
             var fullPath = GetTemplateFullPath(firmName, template.FilePath);
             var templateDirectory = Path.GetDirectoryName(fullPath);
-            if (templateDirectory != null)
+            if (string.IsNullOrWhiteSpace(templateDirectory) || !Directory.Exists(templateDirectory))
+                throw new DirectoryNotFoundException("Template folder was not found.");
+
+            var templatesRoot = Directory.GetParent(templateDirectory)?.FullName ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(templatesRoot))
+                throw new DirectoryNotFoundException("Templates folder was not found.");
+
+            var indexFile = Path.Combine(templatesRoot, "index.json");
+            var index = File.Exists(indexFile)
+                ? SafeFileService.ReadJsonOrDefault(indexFile, new List<TemplateIndexEntry>())
+                : new List<TemplateIndexEntry>();
+
+            var newFolderName = FolderService.NormalizeFolderName(newName);
+            var newDirectory = Path.Combine(templatesRoot, newFolderName);
+            var sameFolder = string.Equals(templateDirectory, newDirectory, StringComparison.OrdinalIgnoreCase);
+            var nameTaken = index.Any(item =>
+                !string.Equals(item.Path, template.FilePath, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(item.Name?.Trim(), newName, StringComparison.OrdinalIgnoreCase));
+            if (nameTaken || (!sameFolder && Directory.Exists(newDirectory)))
+                return TemplateRenameResult.NameTaken;
+
+            var moved = false;
+            var previousDirectory = templateDirectory;
+            try
             {
+                if (!sameFolder)
+                {
+                    Directory.Move(templateDirectory, newDirectory);
+                    moved = true;
+                    templateDirectory = newDirectory;
+                }
+
+                var now = DateTime.Now;
                 var metadataPath = Path.Combine(templateDirectory, "metadata.json");
                 if (File.Exists(metadataPath))
                 {
@@ -1065,14 +609,39 @@ namespace Win11DesktopApp.Services
                     if (meta != null)
                     {
                         meta.Name = newName;
-                        meta.UpdatedAt = DateTime.Now;
+                        meta.UpdatedAt = now;
                         SafeFileService.WriteJsonAtomic(metadataPath, meta);
                     }
                 }
-            }
 
-            template.Name = newName;
-            template.UpdatedAt = DateTime.Now;
+                var relativePath = Path.Combine(Path.GetFileName(templatesRoot), newFolderName, Path.GetFileName(template.FilePath));
+                var item = index.FirstOrDefault(x => string.Equals(x.Path, template.FilePath, StringComparison.OrdinalIgnoreCase));
+                if (item != null)
+                {
+                    item.Name = newName;
+                    item.Path = relativePath;
+                    item.Updated = now;
+                    SafeFileService.WriteJsonAtomic(indexFile, index);
+                }
+
+                template.Name = newName;
+                template.FilePath = relativePath;
+                template.UpdatedAt = now;
+                return TemplateRenameResult.Renamed;
+            }
+            catch
+            {
+                if (moved && Directory.Exists(newDirectory) && !Directory.Exists(previousDirectory))
+                {
+                    try { Directory.Move(newDirectory, previousDirectory); }
+                    catch (Exception rollbackEx)
+                    {
+                        LoggingService.LogError("TemplateService.RenameTemplate.Rollback", rollbackEx);
+                    }
+                }
+
+                throw;
+            }
         }
 
         public TemplateEntry CopyTemplateToCompany(string sourceFirmName, TemplateEntry template, string targetFirmName, string newName)
