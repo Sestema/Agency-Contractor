@@ -15,9 +15,14 @@ namespace Win11DesktopApp.Services
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
+        private const string DocumentHost = "https://app-editor.local/document/";
+
         private readonly Dictionary<int, TaskCompletionSource<JsonElement>> _pending = new();
         private readonly Dictionary<int, string?[]> _saveChunks = new();
         private WebView2? _webView;
+        private CoreWebView2Environment? _environment;
+        private string? _editorFolder;
+        private ServedDocument? _served;
         private int _nextRequestId = 1;
         private bool _ready;
         private bool _disposed;
@@ -41,10 +46,12 @@ namespace Win11DesktopApp.Services
 
             var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: userData);
             await webView.EnsureCoreWebView2Async(environment);
+            _environment = environment;
 
             var editorFolder = Path.Combine(AppContext.BaseDirectory, "WebPanel", "docx-editor");
             if (!File.Exists(Path.Combine(editorFolder, "index.html")))
                 throw new FileNotFoundException("DOCX editor web assets were not found.", editorFolder);
+            _editorFolder = editorFolder;
 
             var core = webView.CoreWebView2;
             core.Settings.AreDefaultContextMenusEnabled = true;
@@ -55,6 +62,11 @@ namespace Win11DesktopApp.Services
                 "app-editor.local",
                 editorFolder,
                 CoreWebView2HostResourceAccessKind.Allow);
+            core.AddWebResourceRequestedFilter(
+                DocumentHost + "*",
+                CoreWebView2WebResourceContext.All,
+                CoreWebView2WebResourceRequestSourceKinds.All);
+            core.WebResourceRequested += OnWebResourceRequested;
             core.WebMessageReceived += OnWebMessageReceived;
 
             try
@@ -105,21 +117,20 @@ namespace Win11DesktopApp.Services
         {
             if (docxBytes == null || docxBytes.Length == 0)
             {
+                _served = null;
                 LoggingService.LogWarning("DocxEditorWebHost.LoadDocument", "Refusing to open an empty document.");
-                Post(new { type = "loadStart", count = 0 });
+                DocumentLoadFailed?.Invoke("The editor received an empty document.");
                 return;
             }
 
-            var payload = Convert.ToBase64String(docxBytes);
-            var count = ChunkCount(payload);
-            LoggingService.LogInfo("DocxEditorWebHost.LoadDocument", $"Sending {docxBytes.Length} bytes in {count} message(s).");
-            Post(new { type = "loadStart", count });
-            for (var index = 0; index < count; index++)
-            {
-                var start = index * MessageChunkChars;
-                var length = Math.Min(MessageChunkChars, payload.Length - start);
-                Post(new { type = "loadChunk", index, data = payload.Substring(start, length) });
-            }
+            // A large postMessage is cut after the first piece. The page downloads the whole file instead.
+            var copy = new byte[docxBytes.Length];
+            Buffer.BlockCopy(docxBytes, 0, copy, 0, docxBytes.Length);
+            var url = DocumentHost + Guid.NewGuid().ToString("N") + ".docx";
+            PublishDocumentFile(url, copy);
+            _served = new ServedDocument(url, copy);
+            LoggingService.LogInfo("DocxEditorWebHost.LoadDocument", $"Offering {copy.Length} bytes at {url}");
+            Post(new { type = "loadUrl", url, size = copy.Length });
         }
 
         public void InsertText(string text)
@@ -168,7 +179,13 @@ namespace Win11DesktopApp.Services
             _disposed = true;
 
             if (_webView?.CoreWebView2 != null)
+            {
+                _webView.CoreWebView2.WebResourceRequested -= OnWebResourceRequested;
                 _webView.CoreWebView2.WebMessageReceived -= OnWebMessageReceived;
+            }
+
+            _served = null;
+            DeletePublishedDocuments();
 
             foreach (var pending in _pending.Values)
                 pending.TrySetCanceled();
@@ -199,6 +216,84 @@ namespace Win11DesktopApp.Services
 
         private static int ChunkCount(string payload) =>
             Math.Max(1, (payload.Length + MessageChunkChars - 1) / MessageChunkChars);
+
+        private void OnWebResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
+        {
+            if (_environment == null)
+                return;
+
+            var served = _served;
+            var requestUri = e.Request.Uri ?? string.Empty;
+            if (served == null || !IsServedDocument(requestUri, served.Url))
+            {
+                e.Response = _environment.CreateWebResourceResponse(
+                    new MemoryStream(Array.Empty<byte>()),
+                    404,
+                    "Not Found",
+                    "Content-Type: text/plain\r\nCache-Control: no-store");
+                LoggingService.LogWarning("DocxEditorWebHost.ServeDocument", $"Refused {requestUri}");
+                return;
+            }
+
+            e.Response = _environment.CreateWebResourceResponse(
+                new MemoryStream(served.Bytes, writable: false),
+                200,
+                "OK",
+                "Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\nCache-Control: no-store");
+            LoggingService.LogInfo("DocxEditorWebHost.ServeDocument", $"Served {served.Bytes.Length} bytes.");
+        }
+
+        private void PublishDocumentFile(string url, byte[] bytes)
+        {
+            if (string.IsNullOrEmpty(_editorFolder))
+                return;
+
+            try
+            {
+                var folder = Path.Combine(_editorFolder, "document");
+                Directory.CreateDirectory(folder);
+                var name = url[DocumentHost.Length..];
+                foreach (var old in Directory.GetFiles(folder, "*.docx"))
+                {
+                    if (!string.Equals(Path.GetFileName(old), name, StringComparison.OrdinalIgnoreCase))
+                        File.Delete(old);
+                }
+
+                File.WriteAllBytes(Path.Combine(folder, name), bytes);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("DocxEditorWebHost.PublishDocument", ex.Message);
+            }
+        }
+
+        private void DeletePublishedDocuments()
+        {
+            if (string.IsNullOrEmpty(_editorFolder))
+                return;
+
+            var folder = Path.Combine(_editorFolder, "document");
+            if (!Directory.Exists(folder))
+                return;
+
+            try
+            {
+                Directory.Delete(folder, recursive: true);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("DocxEditorWebHost.PublishDocument", ex.Message);
+            }
+        }
+
+        private static bool IsServedDocument(string requestUri, string servedUrl)
+        {
+            var cut = requestUri.IndexOfAny(['?', '#']);
+            var path = cut >= 0 ? requestUri[..cut] : requestUri;
+            return string.Equals(path, servedUrl, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private sealed record ServedDocument(string Url, byte[] Bytes);
 
         private void Post(object message)
         {

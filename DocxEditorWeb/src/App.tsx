@@ -2,7 +2,6 @@ import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, us
 import { DocxEditor, LocaleProvider, useChromeTranslate, useEditorSnapshot } from '@docx-editor.dev/react';
 import type { Editor } from '@docx-editor.dev/core';
 import {
-  base64ToBytes,
   bytesToBase64,
   isHosted,
   onHostMessage,
@@ -33,7 +32,7 @@ export function App() {
   const [editor, setEditor] = useState<Editor | null>(null);
   const tagsRef = useRef<string[]>(init?.tags ?? []);
   const highlightTimer = useRef<number | undefined>(undefined);
-  const incomingChunks = useRef<string[] | null>(null);
+  const loadGeneration = useRef(0);
 
   const scheduleHighlights = useCallback(() => {
     window.clearTimeout(highlightTimer.current);
@@ -66,6 +65,28 @@ export function App() {
   }, [scheduleHighlights]);
 
   useEffect(() => {
+    const openDownloadedDocument = async (url: string, size: number) => {
+      const generation = ++loadGeneration.current;
+      editorRef.current = null;
+      setEditor(null);
+      try {
+        if (!url || size <= 0) throw new Error('The editor received an empty document.');
+        const response = await fetch(url, { cache: 'no-store' });
+        if (generation !== loadGeneration.current) return;
+        if (!response.ok) throw new Error(`The editor could not download the document (${response.status}).`);
+        const source = new Uint8Array(await response.arrayBuffer());
+        if (generation !== loadGeneration.current) return;
+        if (source.byteLength !== size) {
+          throw new Error(`The editor received ${source.byteLength} bytes instead of ${size}.`);
+        }
+        postToHost({ type: 'trace', message: `Editor received ${source.byteLength} of ${size} bytes` });
+        setDoc((prev) => ({ key: (prev?.key ?? 0) + 1, source }));
+      } catch (error) {
+        if (generation !== loadGeneration.current) return;
+        postToHost({ type: 'loadFailed', message: String(error instanceof Error ? error.message : error) });
+      }
+    };
+
     onHostMessage((message: HostMessage) => {
       switch (message.type) {
         case 'init':
@@ -76,13 +97,8 @@ export function App() {
         case 'fontChunk':
           acceptFontChunk(message.id, message.index, message.data);
           break;
-        case 'loadStart':
-          editorRef.current = null;
-          setEditor(null);
-          beginDocumentLoad(message.count);
-          break;
-        case 'loadChunk':
-          acceptDocumentChunk(message.index, message.data);
+        case 'loadUrl':
+          void openDownloadedDocument(message.url, message.size);
           break;
         case 'insertText':
           insertAtCaret(editorRef.current, message.text);
@@ -95,28 +111,6 @@ export function App() {
     });
     postToHost({ type: 'ready' });
   }, [handleRequest, scheduleHighlights]);
-
-  const beginDocumentLoad = (count: number) => {
-    incomingChunks.current = count > 0 ? new Array<string>(count) : null;
-    if (count === 0) postToHost({ type: 'loadFailed', message: 'The editor received an empty document.' });
-  };
-
-  const acceptDocumentChunk = (index: number, data: string) => {
-    const parts = incomingChunks.current;
-    if (!parts || index < 0 || index >= parts.length) return;
-    parts[index] = data;
-    if (parts.some((part) => part === undefined)) return;
-
-    try {
-      const source = base64ToBytes(parts.join(''));
-      incomingChunks.current = null;
-      postToHost({ type: 'trace', message: `Editor received ${source.byteLength} bytes inline` });
-      if (source.byteLength === 0) throw new Error('The editor received an empty document.');
-      setDoc((prev) => ({ key: (prev?.key ?? 0) + 1, source }));
-    } catch (error) {
-      postToHost({ type: 'loadFailed', message: String(error instanceof Error ? error.message : error) });
-    }
-  };
 
   useEffect(() => {
     const blockHostShortcuts = (event: KeyboardEvent) => {

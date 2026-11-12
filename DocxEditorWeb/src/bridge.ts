@@ -13,15 +13,10 @@ export interface InitMessage {
   fonts: HostFontFace[];
 }
 
-export interface LoadStartMessage {
-  type: 'loadStart';
-  count: number;
-}
-
-export interface LoadChunkMessage {
-  type: 'loadChunk';
-  index: number;
-  data: string;
+export interface LoadUrlMessage {
+  type: 'loadUrl';
+  url: string;
+  size: number;
 }
 
 export interface InsertTextMessage {
@@ -49,7 +44,7 @@ export interface RequestMessage {
   items?: TagReplacement[];
 }
 
-export type HostMessage = InitMessage | LoadStartMessage | LoadChunkMessage | InsertTextMessage | FontChunkMessage | RequestMessage;
+export type HostMessage = InitMessage | LoadUrlMessage | InsertTextMessage | FontChunkMessage | RequestMessage;
 
 export type EditorMessage =
   | { type: 'ready' }
