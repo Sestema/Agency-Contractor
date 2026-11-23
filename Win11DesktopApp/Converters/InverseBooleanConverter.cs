@@ -334,21 +334,6 @@ namespace Win11DesktopApp.Converters
             => Binding.DoNothing;
     }
 
-    public class StringEqualConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            return string.Equals(value?.ToString(), parameter?.ToString(), StringComparison.OrdinalIgnoreCase);
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if (value is bool b && b)
-                return parameter?.ToString() ?? "";
-            return Binding.DoNothing;
-        }
-    }
-
     public class ExpiryWarningToTextConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

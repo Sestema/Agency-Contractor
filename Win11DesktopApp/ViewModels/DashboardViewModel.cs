@@ -79,6 +79,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ToggleMovementPeriodMenuCommand { get; }
         public ICommand SetMovementMonthCountCommand { get; }
         public ICommand OpenMovementEmployeeDetailCommand { get; }
+        public ICommand SelectMovementTabCommand { get; }
         public ICommand OpenCompanyDetailsCommand { get; }
         public ICommand CloseCompanyDetailsCommand { get; }
         public ICommand OpenCompanyEmployeesCommand { get; }
@@ -127,8 +128,15 @@ namespace Win11DesktopApp.ViewModels
         public bool IsLoading
         {
             get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
+            set
+            {
+                if (SetProperty(ref _isLoading, value))
+                    OnPropertyChanged(nameof(IsPageLoadingVisible));
+            }
         }
+
+        /// <summary>The page-wide loading box; the movement dialog shows its own ring instead.</summary>
+        public bool IsPageLoadingVisible => IsLoading && !IsMonthlyMovementDetailsOpen && !IsDocsDialogOpen;
 
         private bool _isEmployeeDetailsOpen;
         public bool IsEmployeeDetailsOpen
@@ -141,7 +149,11 @@ namespace Win11DesktopApp.ViewModels
         public bool IsMonthlyMovementDetailsOpen
         {
             get => _isMonthlyMovementDetailsOpen;
-            set => SetProperty(ref _isMonthlyMovementDetailsOpen, value);
+            set
+            {
+                if (SetProperty(ref _isMonthlyMovementDetailsOpen, value))
+                    OnPropertyChanged(nameof(IsPageLoadingVisible));
+            }
         }
 
         private bool _isMovementPeriodMenuOpen;
@@ -162,6 +174,7 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(IsMovementPeriod1));
                     OnPropertyChanged(nameof(IsMovementPeriod2));
                     OnPropertyChanged(nameof(IsMovementPeriod3));
+                    OnPropertyChanged(nameof(MovementNetCaption));
                 }
             }
         }
@@ -223,14 +236,281 @@ namespace Win11DesktopApp.ViewModels
         public int TotalEmployees
         {
             get => _totalEmployees;
-            set => SetProperty(ref _totalEmployees, value);
+            set
+            {
+                if (SetProperty(ref _totalEmployees, value))
+                {
+                    OnPropertyChanged(nameof(MovementActiveCount));
+                    NotifyDocsTile();
+                }
+            }
         }
+
+        // Shared movement dialog (MonthlyMovementDetailsOverlay) also used by the report.
+        public int MovementActiveCount => TotalEmployees;
+        public bool ShowMovementPeriodSettings => true;
+        public string MovementDialogTitle => Res("MainStatMonthlyMovement") ?? "Рух за місяць";
 
         private int _totalProblems;
         public int TotalProblems
         {
             get => _totalProblems;
-            set => SetProperty(ref _totalProblems, value);
+            set
+            {
+                if (SetProperty(ref _totalProblems, value))
+                    OnPropertyChanged(nameof(DocsDetailText));
+            }
+        }
+
+        // ===== "Documents in order" tile: people whose documents are neither expired nor ending within 30 days =====
+        private int _docsOkEmployees;
+        public int DocsOkEmployees
+        {
+            get => _docsOkEmployees;
+            private set
+            {
+                if (SetProperty(ref _docsOkEmployees, value))
+                    NotifyDocsTile();
+            }
+        }
+
+        private int _docsExpiredCount;
+        public int DocsExpiredCount
+        {
+            get => _docsExpiredCount;
+            private set
+            {
+                if (SetProperty(ref _docsExpiredCount, value))
+                    OnPropertyChanged(nameof(DocsDetailText));
+            }
+        }
+
+        public int DocsNotOkEmployees => Math.Max(0, TotalEmployees - DocsOkEmployees);
+
+        // ===== "Documents in order" dialog =====
+        private bool _isDocsDialogOpen;
+        public bool IsDocsDialogOpen
+        {
+            get => _isDocsDialogOpen;
+            set
+            {
+                if (SetProperty(ref _isDocsDialogOpen, value))
+                    OnPropertyChanged(nameof(IsPageLoadingVisible));
+            }
+        }
+
+        private string _docsDialogTab = "expired";
+        public string DocsDialogTab
+        {
+            get => _docsDialogTab;
+            set
+            {
+                if (SetProperty(ref _docsDialogTab, value))
+                {
+                    OnPropertyChanged(nameof(IsDocsTabExpired));
+                    OnPropertyChanged(nameof(IsDocsTabSoon));
+                    OnPropertyChanged(nameof(IsDocsTabOk));
+                    OnPropertyChanged(nameof(DocsVisiblePeople));
+                    OnPropertyChanged(nameof(DocsVisibleEmptyText));
+                }
+            }
+        }
+
+        public bool IsDocsTabExpired => DocsDialogTab == "expired";
+        public bool IsDocsTabSoon => DocsDialogTab == "soon";
+        public bool IsDocsTabOk => DocsDialogTab == "ok";
+
+        private ObservableCollection<DocumentStatusPerson> _docsExpiredPeople = new();
+        public ObservableCollection<DocumentStatusPerson> DocsExpiredPeople { get => _docsExpiredPeople; private set => SetProperty(ref _docsExpiredPeople, value); }
+
+        private ObservableCollection<DocumentStatusPerson> _docsSoonPeople = new();
+        public ObservableCollection<DocumentStatusPerson> DocsSoonPeople { get => _docsSoonPeople; private set => SetProperty(ref _docsSoonPeople, value); }
+
+        private ObservableCollection<DocumentStatusPerson> _docsOkPeople = new();
+        public ObservableCollection<DocumentStatusPerson> DocsOkPeople { get => _docsOkPeople; private set => SetProperty(ref _docsOkPeople, value); }
+
+        public ObservableCollection<DocumentStatusPerson> DocsVisiblePeople => DocsDialogTab switch
+        {
+            "soon" => DocsSoonPeople,
+            "ok" => DocsOkPeople,
+            _ => DocsExpiredPeople
+        };
+
+        public string DocsVisibleEmptyText => DocsDialogTab switch
+        {
+            "soon" => Res("DashDocsEmptySoon") ?? "Нічого не закінчується найближчі 30 днів.",
+            "ok" => Res("DashDocsEmptyOk") ?? "Немає людей з усіма документами в порядку.",
+            _ => Res("DashDocsEmptyExpired") ?? "Прострочених документів немає."
+        };
+
+        private string _docsTopFirmText = string.Empty;
+        public string DocsTopFirmText { get => _docsTopFirmText; private set => SetProperty(ref _docsTopFirmText, value); }
+
+        public string DocsDialogDateText => DateTime.Today.ToString("dd.MM.yyyy");
+
+        public ICommand OpenDocsDialogCommand { get; private set; } = null!;
+        public ICommand CloseDocsDialogCommand { get; private set; } = null!;
+        public ICommand SelectDocsTabCommand { get; private set; } = null!;
+        public ICommand OpenDocsEmployeeCommand { get; private set; } = null!;
+
+        private bool _reopenDocsAfterDetails;
+
+        private void ApplyDocsPeople(List<DocumentStatusPerson> people)
+        {
+            DocsExpiredPeople = new ObservableCollection<DocumentStatusPerson>(people
+                .Where(person => person.Status == "expired")
+                .OrderBy(person => person.WorstDays)
+                .ThenBy(person => person.FullName, StringComparer.CurrentCultureIgnoreCase));
+            DocsSoonPeople = new ObservableCollection<DocumentStatusPerson>(people
+                .Where(person => person.Status == "soon")
+                .OrderBy(person => person.WorstDays)
+                .ThenBy(person => person.FullName, StringComparer.CurrentCultureIgnoreCase));
+            DocsOkPeople = new ObservableCollection<DocumentStatusPerson>(people
+                .Where(person => person.Status == "ok")
+                .OrderBy(person => person.WorstDays)
+                .ThenBy(person => person.FullName, StringComparer.CurrentCultureIgnoreCase));
+            DocsTopFirmText = BuildTopProblemFirmText(people);
+            OnPropertyChanged(nameof(DocsVisiblePeople));
+        }
+
+        private void InitDocsDialogCommands()
+        {
+            OpenDocsDialogCommand = new RelayCommand(_ =>
+            {
+                DocsDialogTab = DocsExpiredPeople.Count > 0 ? "expired" : DocsSoonPeople.Count > 0 ? "soon" : "ok";
+                OnPropertyChanged(nameof(DocsDialogDateText));
+                OnPropertyChanged(nameof(DocsVisibleEmptyText));
+                IsDocsDialogOpen = true;
+            });
+            CloseDocsDialogCommand = new RelayCommand(_ => IsDocsDialogOpen = false);
+            SelectDocsTabCommand = new RelayCommand(o =>
+            {
+                var tab = o?.ToString();
+                if (tab is "expired" or "soon" or "ok")
+                    DocsDialogTab = tab;
+            });
+            OpenDocsEmployeeCommand = new RelayCommand(o =>
+            {
+                if (o is not DocumentStatusPerson person || string.IsNullOrEmpty(person.EmployeeFolder))
+                    return;
+
+                if (EmployeeDetailsVm != null)
+                {
+                    EmployeeDetailsVm.RequestClose -= OnDetailsClose;
+                    EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
+                    EmployeeDetailsVm.Cleanup();
+                }
+                EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(person.FirmName, person.EmployeeFolder, employeeId: person.UniqueId);
+                EmployeeDetailsVm.RequestClose += OnDetailsClose;
+                EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
+                _reopenMovementAfterDetails = false;
+                _reopenDocsAfterDetails = true;
+                IsDocsDialogOpen = false;
+                IsEmployeeDetailsOpen = true;
+            });
+        }
+
+        /// <summary>Firm with the most people that have a problem, e.g. "Bidfood Dyšina · 8"; empty when nobody has one.</summary>
+        internal static string BuildTopProblemFirmText(IEnumerable<DocumentStatusPerson> people)
+        {
+            var top = people
+                .Where(person => person.Status != "ok" && !string.IsNullOrWhiteSpace(person.FirmName))
+                .GroupBy(person => person.FirmName, StringComparer.OrdinalIgnoreCase)
+                .Select(group => (Firm: group.First().FirmName, Count: group.Count()))
+                .OrderByDescending(group => group.Count)
+                .ThenBy(group => group.Firm, StringComparer.CurrentCultureIgnoreCase)
+                .FirstOrDefault();
+            return top.Count == 0 ? string.Empty : $"{top.Firm} · {top.Count}";
+        }
+
+        /// <summary>Uses the same documents and rules as <see cref="AreEmployeeDocumentsOk"/>.</summary>
+        internal static DocumentStatusPerson BuildDocumentStatusPerson(EmployeeSummary emp, string firmName)
+        {
+            var docs = new List<(string Name, string Date)>
+            {
+                (Res("DetDocPassport") ?? "Паспорт", emp.PassportExpiry)
+            };
+            if (emp.EmployeeType != "eu_citizen")
+                docs.Add((Res("DetDocVisa") ?? "Віза", emp.VisaExpiry));
+            docs.Add((Res("DetDocInsurance") ?? "Страховка", emp.InsuranceExpiry));
+            if (emp.EmployeeType == "work_permit")
+                docs.Add((Res("DetDocWorkPermit") ?? "Дозвіл", emp.WorkPermitExpiry));
+
+            var daysShort = Res("DashMovementDaysShort") ?? "дн.";
+            var person = new DocumentStatusPerson
+            {
+                FullName = emp.FullName ?? string.Empty,
+                FirmName = firmName ?? string.Empty,
+                EmployeeFolder = emp.EmployeeFolder ?? string.Empty,
+                UniqueId = emp.UniqueId ?? string.Empty,
+                Initials = BuildInitials(emp.FullName)
+            };
+
+            var dated = docs
+                .Select(doc => (doc.Name, doc.Date, Severity: DateParsingHelper.GetSeverity(doc.Date), Days: DateParsingHelper.GetDaysRemaining(doc.Date)))
+                .Where(doc => doc.Severity != "Unknown")
+                .OrderBy(doc => doc.Days)
+                .ToList();
+
+            foreach (var doc in dated.Where(doc => doc.Severity is "Expired" or "Critical" or "Warning"))
+            {
+                var expired = doc.Severity == "Expired";
+                person.Chips.Add(new DocumentStatusChip
+                {
+                    Kind = expired ? "expired" : "soon",
+                    Text = expired ? $"{doc.Name} \u2212{-doc.Days} {daysShort}" : $"{doc.Name} {doc.Days} {daysShort}"
+                });
+            }
+
+            person.WorstDays = dated.Count > 0 ? dated[0].Days : int.MaxValue;
+            person.Status = dated.Any(doc => doc.Severity == "Expired") ? "expired"
+                : dated.Any(doc => doc.Severity is "Critical" or "Warning") ? "soon"
+                : "ok";
+
+            if (person.Status == "ok" && dated.Count > 0)
+            {
+                var next = dated[0];
+                var date = DateParsingHelper.TryParseDate(next.Date);
+                person.Chips.Add(new DocumentStatusChip
+                {
+                    Kind = "next",
+                    Text = string.Format(Res("DashDocsNextFmt") ?? "{0} до {1}", next.Name, date?.ToString("dd.MM.yyyy") ?? next.Date)
+                });
+            }
+
+            return person;
+        }
+
+        public string DocsOkPercentText => TotalEmployees <= 0
+            ? "—"
+            : $"{(int)Math.Round(100.0 * DocsOkEmployees / TotalEmployees)}%";
+
+        public string DocsOkOfText => string.Format(Res("DashDocsOkOfFmt") ?? "{0} з {1}", DocsOkEmployees, TotalEmployees);
+
+        public string DocsDetailText => string.Format(
+            Res("DashDocsOkDetailFmt") ?? "{0} прострочено · {1} скоро",
+            DocsExpiredCount,
+            Math.Max(0, TotalProblems - DocsExpiredCount));
+
+        private void NotifyDocsTile()
+        {
+            OnPropertyChanged(nameof(DocsNotOkEmployees));
+            OnPropertyChanged(nameof(DocsOkPercentText));
+            OnPropertyChanged(nameof(DocsOkOfText));
+        }
+
+        /// <summary>Same documents and rules as the expiring list: passport, visa (not EU), insurance, work permit (if needed).</summary>
+        internal static bool AreEmployeeDocumentsOk(EmployeeSummary emp)
+        {
+            static bool IsProblem(string date) => DateParsingHelper.GetSeverity(date) is "Expired" or "Critical" or "Warning";
+
+            if (IsProblem(emp.PassportExpiry) || IsProblem(emp.InsuranceExpiry))
+                return false;
+            if (emp.EmployeeType != "eu_citizen" && IsProblem(emp.VisaExpiry))
+                return false;
+            if (emp.EmployeeType == "work_permit" && IsProblem(emp.WorkPermitExpiry))
+                return false;
+            return true;
         }
 
         private int _totalTemplates;
@@ -257,6 +537,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     OnPropertyChanged(nameof(MonthlyMovementSummaryText));
                     OnPropertyChanged(nameof(MonthlyMovementMax));
+                    OnPropertyChanged(nameof(MovementNetText));
                 }
             }
         }
@@ -271,6 +552,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     OnPropertyChanged(nameof(MonthlyMovementSummaryText));
                     OnPropertyChanged(nameof(MonthlyMovementMax));
+                    OnPropertyChanged(nameof(MovementNetText));
                 }
             }
         }
@@ -282,14 +564,88 @@ namespace Win11DesktopApp.ViewModels
         public ObservableCollection<MonthlyMovementItem> MonthlyAddedEmployees
         {
             get => _monthlyAddedEmployees;
-            set => SetProperty(ref _monthlyAddedEmployees, value);
+            set
+            {
+                if (SetProperty(ref _monthlyAddedEmployees, value))
+                    OnPropertyChanged(nameof(MovementVisibleEmployees));
+            }
         }
 
         private ObservableCollection<MonthlyMovementItem> _monthlyArchivedEmployees = new();
         public ObservableCollection<MonthlyMovementItem> MonthlyArchivedEmployees
         {
             get => _monthlyArchivedEmployees;
-            set => SetProperty(ref _monthlyArchivedEmployees, value);
+            set
+            {
+                if (SetProperty(ref _monthlyArchivedEmployees, value))
+                    OnPropertyChanged(nameof(MovementVisibleEmployees));
+            }
+        }
+
+        private bool _reopenMovementAfterDetails;
+
+        private bool _isMovementArchivedTab;
+        /// <summary>false = "added" tab, true = "archived" tab in the movement dialog.</summary>
+        public bool IsMovementArchivedTab
+        {
+            get => _isMovementArchivedTab;
+            set
+            {
+                if (SetProperty(ref _isMovementArchivedTab, value))
+                {
+                    OnPropertyChanged(nameof(IsMovementAddedTab));
+                    OnPropertyChanged(nameof(MovementVisibleEmployees));
+                    OnPropertyChanged(nameof(MovementVisibleEmptyText));
+                }
+            }
+        }
+
+        public bool IsMovementAddedTab => !IsMovementArchivedTab;
+
+        public ObservableCollection<MonthlyMovementItem> MovementVisibleEmployees
+            => IsMovementArchivedTab ? MonthlyArchivedEmployees : MonthlyAddedEmployees;
+
+        public string MovementVisibleEmptyText
+            => IsMovementArchivedTab ? MovementArchivedEmptyText : MovementAddedEmptyText;
+
+        public string MovementNetText
+        {
+            get
+            {
+                var net = MonthlyEmployeesAddedCount - MonthlyEmployeesArchivedCount;
+                return net > 0 ? $"+{net}" : net < 0 ? $"−{-net}" : "0";
+            }
+        }
+
+        public string MovementNetCaption => MovementMonthCount <= 1
+            ? Res("DashMovementNetMonth") ?? "за місяць"
+            : string.Format(Res("DashMovementNetPeriodFmt") ?? "за {0} міс.", MovementMonthCount);
+
+        private string _movementTopAddedFirmText = string.Empty;
+        public string MovementTopAddedFirmText
+        {
+            get => _movementTopAddedFirmText;
+            private set => SetProperty(ref _movementTopAddedFirmText, value);
+        }
+
+        private string _movementTopArchivedFirmText = string.Empty;
+        public string MovementTopArchivedFirmText
+        {
+            get => _movementTopArchivedFirmText;
+            private set => SetProperty(ref _movementTopArchivedFirmText, value);
+        }
+
+        /// <summary>Firm with the most people in the list, e.g. "DCK Holoubkov +5"; empty for an empty list.</summary>
+        internal static string BuildTopFirmText(IEnumerable<MonthlyMovementItem> items, string sign)
+        {
+            var top = items
+                .Where(item => !string.IsNullOrWhiteSpace(item.FirmName))
+                .GroupBy(item => item.FirmName, StringComparer.OrdinalIgnoreCase)
+                .Select(group => (Firm: group.First().FirmName, Count: group.Count()))
+                .OrderByDescending(group => group.Count)
+                .ThenBy(group => group.Firm, StringComparer.CurrentCultureIgnoreCase)
+                .FirstOrDefault();
+            return top.Count == 0 ? string.Empty : $"{top.Firm} {sign}{top.Count}";
         }
 
         private int _totalEmployeesAllTime;
@@ -419,13 +775,17 @@ namespace Win11DesktopApp.ViewModels
                         EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
                         EmployeeDetailsVm.Cleanup();
                     }
+                    _reopenMovementAfterDetails = false;
+                    _reopenDocsAfterDetails = false;
                     EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(item.CompanyName, item.EmployeeFolder, employeeId: item.UniqueId);
                     EmployeeDetailsVm.RequestClose += OnDetailsClose;
                     EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
                     IsEmployeeDetailsOpen = true;
                 }
             });
+            InitDocsDialogCommands();
             OpenMonthlyMovementDetailsCommand = new RelayCommand(_ => IsMonthlyMovementDetailsOpen = true);
+            SelectMovementTabCommand = new RelayCommand(o => IsMovementArchivedTab = string.Equals(o?.ToString(), "archived", StringComparison.OrdinalIgnoreCase));
             CloseMonthlyMovementDetailsCommand = new RelayCommand(_ =>
             {
                 IsMonthlyMovementDetailsOpen = false;
@@ -456,6 +816,8 @@ namespace Win11DesktopApp.ViewModels
                     EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(item.FirmName, item.EmployeeFolder, employeeId: item.UniqueId);
                     EmployeeDetailsVm.RequestClose += OnDetailsClose;
                     EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
+                    _reopenMovementAfterDetails = true;
+                    _reopenDocsAfterDetails = false;
                     IsMonthlyMovementDetailsOpen = false;
                     IsEmployeeDetailsOpen = true;
                 }
@@ -509,7 +871,36 @@ namespace Win11DesktopApp.ViewModels
             _appSettingsService.SaveSettings();
             IsMovementPeriodMenuOpen = false;
             UpdateMovementPeriodTexts();
-            _ = LoadDataAsync();
+            _ = ReloadMovementAsync();
+        }
+
+        private int _movementReloadGeneration;
+
+        /// <summary>Reloads after a period switch; the dialog ring stays at least a moment so it is clearly seen.</summary>
+        private async Task ReloadMovementAsync()
+        {
+            var generation = ++_movementReloadGeneration;
+            IsMovementLoading = true;
+            try
+            {
+                await Task.WhenAll(LoadDataAsync(), Task.Delay(450));
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("DashboardViewModel.ReloadMovementAsync", ex.Message);
+            }
+            finally
+            {
+                if (generation == _movementReloadGeneration)
+                    IsMovementLoading = false;
+            }
+        }
+
+        private bool _isMovementLoading;
+        public bool IsMovementLoading
+        {
+            get => _isMovementLoading;
+            private set => SetProperty(ref _isMovementLoading, value);
         }
 
         private void UpdateMovementPeriodTexts()
@@ -529,6 +920,7 @@ namespace Win11DesktopApp.ViewModels
                 MovementAddedEmptyText = Res("DashMovementAddedEmptyPeriod") ?? string.Empty;
                 MovementArchivedEmptyText = Res("DashMovementArchivedEmptyPeriod") ?? string.Empty;
             }
+            OnPropertyChanged(nameof(MovementVisibleEmptyText));
         }
 
         private static int NormalizeMovementMonthCount(int count)
@@ -621,7 +1013,20 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             }
         }
 
-        private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
+        private void OnDetailsClose()
+        {
+            IsEmployeeDetailsOpen = false;
+            if (_reopenMovementAfterDetails)
+            {
+                _reopenMovementAfterDetails = false;
+                IsMonthlyMovementDetailsOpen = true;
+            }
+            else if (_reopenDocsAfterDetails)
+            {
+                _reopenDocsAfterDetails = false;
+                IsDocsDialogOpen = true;
+            }
+        }
         private void OnDetailsDataChanged(EmployeeDataChangedEventArgs e) => _ = LoadDataAsync();
 
         private string GetSlot(int index) => index switch { 0 => Slot0, 1 => Slot1, 2 => Slot2, _ => "" };
@@ -680,6 +1085,9 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
                 TotalEmployees = data.TotalEmployees;
                 TotalProblems = data.TotalProblems;
+                DocsOkEmployees = data.DocsOkEmployees;
+                DocsExpiredCount = data.DocsExpiredCount;
+                ApplyDocsPeople(data.DocsPeople);
                 TotalTemplates = data.TotalTemplates;
                 TotalCompanies = data.TotalCompanies;
                 TotalEmployeesAllTime = data.TotalEmployeesAllTime;
@@ -690,6 +1098,8 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                 MonthlyEmployeesArchivedCount = data.MonthlyEmployeesArchivedCount;
                 MonthlyAddedEmployees = new ObservableCollection<MonthlyMovementItem>(data.MonthlyAddedEmployees);
                 MonthlyArchivedEmployees = new ObservableCollection<MonthlyMovementItem>(data.MonthlyArchivedEmployees);
+                MovementTopAddedFirmText = BuildTopFirmText(data.MonthlyAddedEmployees, "+");
+                MovementTopArchivedFirmText = BuildTopFirmText(data.MonthlyArchivedEmployees, "−");
                 EmployeeTrend = data.EmployeeTrend;
                 ProblemTrend = data.ProblemTrend;
                 TemplateTrend = data.TemplateTrend;
@@ -807,6 +1217,10 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                         if (emp.EmployeeType == "work_permit")
                             CheckExpiry(emp.WorkPermitExpiry, emp.FullName,
                                 Res("DetDocWorkPermit"), company.Name, emp.EmployeeFolder, emp.UniqueId, result.ExpiringDocs, ref companyProblems, ref expiredCount, ref criticalCount);
+
+                        if (AreEmployeeDocumentsOk(emp))
+                            result.DocsOkEmployees++;
+                        result.DocsPeople.Add(BuildDocumentStatusPerson(emp, company.Name));
                     }
 
                     result.TotalProblems += companyProblems;
@@ -852,14 +1266,16 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                     if (IsDateInMovementPeriod(archived.EndDate, now, movementMonthCount))
                     {
                         archivedThisMonth++;
-                        result.MonthlyArchivedEmployees.Add(CreateMovementItem(
+                        var archivedItem = CreateMovementItem(
                             archived.FullName,
                             archived.FirmName,
                             archived.EndDate,
                             archived.UniqueId,
                             archived.EmployeeFolder,
                             Res("DashMovementStatusArchived"),
-                            "#E53935"));
+                            "#E53935");
+                        archivedItem.DetailText = BuildWorkedText(archived.StartDate, archived.EndDate);
+                        result.MonthlyArchivedEmployees.Add(archivedItem);
                     }
                 }
             }
@@ -871,11 +1287,21 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             foreach (var cs in result.CompanyStats)
                 cs.TotalEmployees = result.TotalEmployees;
 
+            result.MonthlyAddedEmployees = result.MonthlyAddedEmployees
+                .OrderByDescending(item => item.SortDate ?? DateTime.MinValue)
+                .ThenBy(item => item.FullName, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            result.MonthlyArchivedEmployees = result.MonthlyArchivedEmployees
+                .OrderByDescending(item => item.SortDate ?? DateTime.MinValue)
+                .ThenBy(item => item.FullName, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+
             result.MonthlyEmployeesAddedCount = addedIds.Count + addedFallbacks.Count;
             result.MonthlyEmployeesArchivedCount = archivedThisMonth;
             result.TotalEmployeesAllTime = allTimeEmployeeIds.Count + allTimeEmployeeFallbacks.Count;
             result.EmployeeTrend = result.MonthlyEmployeesAddedCount > 0 ? $"+{result.MonthlyEmployeesAddedCount} {Res("DashThisMonth")}" : Res("DashNoChange");
             result.ProblemTrend = expiredCount > 0 ? $"{expiredCount} {Res("DashExpired")}" : Res("DashAllGood");
+            result.DocsExpiredCount = expiredCount;
             result.TemplateTrend = $"{result.TotalTemplates} {Res("DashAvailable")}";
 
             result.ExpiringDocs = result.ExpiringDocs
@@ -1035,11 +1461,54 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                 FullName = fullName ?? string.Empty,
                 FirmName = firmName ?? string.Empty,
                 DateText = FormatMovementDate(dateText),
+                SortDate = DateParsingHelper.TryParseDate(dateText),
+                Initials = BuildInitials(fullName),
                 UniqueId = uniqueId ?? string.Empty,
                 EmployeeFolder = employeeFolder ?? string.Empty,
                 StatusText = statusText,
                 StatusColor = statusColor
             };
+        }
+
+        internal static string BuildInitials(string? fullName)
+        {
+            var parts = (fullName ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0)
+                return string.Empty;
+            var first = char.ToUpperInvariant(parts[0][0]).ToString();
+            return parts.Length == 1 ? first : first + char.ToUpperInvariant(parts[^1][0]);
+        }
+
+        /// <summary>"Працював(ла) 4 міс." — how long the person worked; empty when dates are unknown.</summary>
+        internal static string BuildWorkedText(string? startDate, string? endDate)
+        {
+            var start = DateParsingHelper.TryParseDate(startDate ?? string.Empty);
+            var end = DateParsingHelper.TryParseDate(endDate ?? string.Empty);
+            if (start == null || end == null || end.Value < start.Value)
+                return string.Empty;
+
+            var duration = FormatWorkedDuration(start.Value, end.Value,
+                Res("DashMovementYearsShort") ?? "р.",
+                Res("DashMovementMonthsShort") ?? "міс.",
+                Res("DashMovementDaysShort") ?? "дн.");
+            return string.Format(Res("DashMovementWorkedFmt") ?? "Працював(ла) {0}", duration);
+        }
+
+        /// <summary>"12 дн.", "4 міс.", "1 р. 2 міс."</summary>
+        internal static string FormatWorkedDuration(DateTime start, DateTime end, string years, string months, string days)
+        {
+            var totalMonths = (end.Year - start.Year) * 12 + end.Month - start.Month;
+            if (end.Day < start.Day)
+                totalMonths--;
+
+            if (totalMonths < 1)
+                return $"{Math.Max(1, (end - start).Days + 1)} {days}";
+
+            var y = totalMonths / 12;
+            var m = totalMonths % 12;
+            if (y == 0)
+                return $"{m} {months}";
+            return m == 0 ? $"{y} {years}" : $"{y} {years} {m} {months}";
         }
 
         private static string FormatMovementDate(string dateText)
@@ -1110,6 +1579,9 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             public int MonthlyEmployeesArchivedCount;
             public string EmployeeTrend = "";
             public string ProblemTrend = "";
+            public int DocsOkEmployees;
+            public int DocsExpiredCount;
+            public List<DocumentStatusPerson> DocsPeople = new();
             public string TemplateTrend = "";
             public string SalaryTotalText = "";
             public List<MonthlyMovementItem> MonthlyAddedEmployees = new();

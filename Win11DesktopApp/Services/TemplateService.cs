@@ -57,6 +57,35 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        /// <summary>
+        /// Saves the user's own template order in index.json. Entries missing from the list
+        /// (for example added on another PC meanwhile) keep their order after the listed ones.
+        /// </summary>
+        public void ReorderTemplates(string firmName, IReadOnlyList<string> orderedPaths)
+        {
+            if (string.IsNullOrWhiteSpace(firmName) || orderedPaths == null)
+                return;
+
+            var indexFile = Path.Combine(_folderService.GetTemplatesFolder(firmName), "index.json");
+            if (!File.Exists(indexFile))
+                return;
+
+            var index = SafeFileService.ReadJsonOrDefault(indexFile, new List<TemplateIndexEntry>());
+            var rank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (var position = 0; position < orderedPaths.Count; position++)
+                rank.TryAdd(orderedPaths[position] ?? string.Empty, position);
+
+            var reordered = index
+                .Select((entry, position) => (Entry: entry, Position: position))
+                .OrderBy(item => rank.TryGetValue(item.Entry.Path ?? string.Empty, out var target) ? target : int.MaxValue)
+                .ThenBy(item => item.Position)
+                .Select(item => item.Entry)
+                .ToList();
+
+            if (!reordered.SequenceEqual(index))
+                SafeFileService.WriteJsonAtomic(indexFile, reordered);
+        }
+
         public TemplateEntry? AddTemplate(string firmName, string templateName, string description, string format, string sourceFilePath)
         {
             if (string.IsNullOrEmpty(_folderService.RootPath)) return null;

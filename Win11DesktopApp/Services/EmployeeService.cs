@@ -2654,6 +2654,42 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        /// <summary>Removes the given archive log entries. Used to erase a period that was added by mistake.</summary>
+        public async Task<int> RemoveArchiveLogEntriesAsync(IReadOnlyCollection<ArchiveLogEntry> entries)
+        {
+            if (entries == null || entries.Count == 0)
+                return 0;
+
+            await _historyLock.WaitAsync();
+            try
+            {
+                if (_useLocalDbArchiveLog && _archiveLogStorage is SqliteArchiveLogStorage sqlite)
+                    return sqlite.DeleteArchiveLogEntries(entries);
+
+                if (_useLocalDbArchiveLog && _archiveLogStorage != null)
+                    throw new InvalidOperationException("Archive log removal is supported only for local SQLite storage.");
+
+                var path = GetArchiveLogPath();
+                if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                    return 0;
+
+                var log = LoadArchiveLogEntries(path);
+                var removed = log.RemoveAll(existing => entries.Any(entry =>
+                    string.Equals(existing.OperationId, entry.OperationId, StringComparison.Ordinal)
+                    && string.Equals(existing.Action, entry.Action, StringComparison.Ordinal)
+                    && string.Equals(existing.FirmName, entry.FirmName, StringComparison.Ordinal)
+                    && string.Equals(existing.EmployeeFolder, entry.EmployeeFolder, StringComparison.Ordinal)
+                    && string.Equals(existing.Date, entry.Date, StringComparison.Ordinal)));
+                if (removed > 0)
+                    WriteJsonAtomic(path, log);
+                return removed;
+            }
+            finally
+            {
+                _historyLock.Release();
+            }
+        }
+
         // ============ ARCHIVE ============
 
         public List<ArchivedEmployeeSummary> GetArchivedEmployees()

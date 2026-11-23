@@ -146,6 +146,33 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        /// <summary>Removes the given entries (by id). Used to erase a period that was added by mistake.</summary>
+        public int RemoveEntriesByIds(IReadOnlyCollection<string> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return 0;
+
+            var path = LogFilePath;
+            if (string.IsNullOrEmpty(path))
+                return 0;
+
+            if (_useLocalDb && _activityLogStorage is SqliteActivityLogStorage sqlite)
+                return sqlite.DeleteActivityLogEntries(ids);
+
+            if (_useLocalDb && _activityLogStorage != null)
+                throw new InvalidOperationException("Activity log removal is supported only for local SQLite storage.");
+
+            if (!File.Exists(path))
+                return 0;
+
+            var idSet = new HashSet<string>(ids, StringComparer.Ordinal);
+            var entries = LoadEntries(path);
+            var removed = entries.RemoveAll(entry => idSet.Contains(entry.Id));
+            if (removed > 0)
+                SaveEntries(path, entries);
+            return removed;
+        }
+
         public void ClearAll()
         {
             try

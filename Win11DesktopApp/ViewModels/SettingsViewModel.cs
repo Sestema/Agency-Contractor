@@ -240,6 +240,20 @@ namespace Win11DesktopApp.ViewModels
         public ICommand CopySecondPcDatabaseAccessCommand { get; }
         public ICommand RefreshConnectedClientsCommand { get; }
         public ICommand ChangeSettingsSectionCommand { get; }
+        public ICommand OpenHistoryCleanupCommand { get; private set; } = null!;
+        private readonly EmployeeHistoryCleanupService? _employeeHistoryCleanupService;
+
+        private void OpenHistoryCleanup()
+        {
+            if (_employeeHistoryCleanupService == null)
+                return;
+
+            var window = new Views.EmployeeHistoryCleanupWindow(new EmployeeHistoryCleanupViewModel(_employeeHistoryCleanupService))
+            {
+                Owner = System.Windows.Application.Current?.MainWindow
+            };
+            window.ShowDialog();
+        }
         public ICommand CreateSqliteBackupFromPostgresCommand { get; }
         public ICommand ResetPostgresDatabaseCommand { get; }
         public ICommand ConfigurePostgresTailscaleAccessCommand { get; }
@@ -1716,8 +1730,10 @@ namespace Win11DesktopApp.ViewModels
             BusinessUserDirectoryService? businessUserDirectoryService = null,
             BusinessUserSessionService? businessUserSessionService = null,
             WorkspaceSessionService? workspaceSessionService = null,
-            WorkspaceSwitchService? workspaceSwitchService = null)
+            WorkspaceSwitchService? workspaceSwitchService = null,
+            EmployeeHistoryCleanupService? employeeHistoryCleanupService = null)
         {
+            _employeeHistoryCleanupService = employeeHistoryCleanupService;
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
             _folderService = folderService ?? throw new InvalidOperationException("FolderService is not initialized.");
@@ -2022,6 +2038,7 @@ namespace Win11DesktopApp.ViewModels
                 RefreshConnectedClients();
             });
 
+            OpenHistoryCleanupCommand = new RelayCommand(_ => OpenHistoryCleanup(), _ => _employeeHistoryCleanupService != null);
             ChangeSettingsSectionCommand = new RelayCommand(param =>
             {
                 if (param is not string section)

@@ -164,6 +164,10 @@ namespace Win11DesktopApp.EmployeeModels
         public string EmployeeFolder { get; set; } = string.Empty;
         public string StatusText { get; set; } = string.Empty;
         public string StatusColor { get; set; } = "#4CAF50";
+        /// <summary>Extra line, e.g. how long the person worked (only for people who ended).</summary>
+        public string DetailText { get; set; } = string.Empty;
+        public DateTime? SortDate { get; set; }
+        public string Initials { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -187,16 +191,6 @@ namespace Win11DesktopApp.EmployeeModels
         public int FirmCount { get; set; }
         public int TotalEmployees { get; set; }
         public int ActiveEmployees { get; set; }
-    }
-
-    /// <summary>
-    /// One data point for the monthly archive dynamics chart.
-    /// </summary>
-    public class MonthlyArchiveStat
-    {
-        public string MonthLabel { get; set; } = string.Empty;
-        public int Archived { get; set; }
-        public int Restored { get; set; }
     }
 
     /// <summary>

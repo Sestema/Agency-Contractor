@@ -208,6 +208,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Users & Roles Section -->
@@ -1202,8 +1203,43 @@
                 </Grid>
             </Border>
 
-            <!-- Company Visibility Card -->
+            <!-- History cleanup Card: erase a firm period or leftover records added by mistake -->
             <Border Grid.Row="8" Style="{StaticResource SettingsSectionCard}"
+                    Visibility="{Binding IsOwnerProgramSettingsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <Border Background="{DynamicResource ErrorLightBrush}" CornerRadius="8" Width="36" Height="36" VerticalAlignment="Center">
+                            <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                       Foreground="{DynamicResource ErrorBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource HistCleanupTitle}"
+                                       FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                            <TextBlock Text="{DynamicResource HistCleanupShortDesc}"
+                                       FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" Opacity="0.5"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <Button Grid.Column="1" Command="{Binding OpenHistoryCleanupCommand}" Cursor="Hand"
+                            VerticalAlignment="Center" Style="{StaticResource FilledActionButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource HistCleanupOpenButton}"
+                                       FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                       Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- Company Visibility Card -->
+            <Border Grid.Row="9" Style="{StaticResource SettingsSectionCard}"
                     Visibility="{Binding IsProgramSettingsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -1238,7 +1274,7 @@
             </Border>
 
             <!-- Root Folder Card -->
-            <Border Grid.Row="9" Style="{StaticResource SettingsSectionCard}" Padding="20,18"
+            <Border Grid.Row="10" Style="{StaticResource SettingsSectionCard}" Padding="20,18"
                     Visibility="{Binding IsOwnerProgramSettingsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                 <Grid>
@@ -1373,7 +1409,7 @@
             </Border>
 
             <!-- AI (Gemini) Card -->
-            <Border Grid.Row="10" Style="{StaticResource SettingsSectionCard}" Padding="24,22"
+            <Border Grid.Row="11" Style="{StaticResource SettingsSectionCard}" Padding="24,22"
                     Visibility="{Binding IsOwnerProgramSettingsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                     <Grid Margin="0,0,0,16">
@@ -1539,7 +1575,7 @@
             </Border>
 
             <!-- Telegram Bot Section -->
-            <Border Grid.Row="11" Style="{StaticResource SettingsSectionCard}" Padding="24,22"
+            <Border Grid.Row="12" Style="{StaticResource SettingsSectionCard}" Padding="24,22"
                     Visibility="{Binding IsServerSettingsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                     <Grid Margin="0,0,0,16">
@@ -1762,7 +1798,7 @@
             </Border>
 
             <!-- Web Panel Section -->
-            <Border Grid.Row="12" Style="{StaticResource SettingsSectionCard}" Padding="24,22"
+            <Border Grid.Row="13" Style="{StaticResource SettingsSectionCard}" Padding="24,22"
                     Visibility="{Binding IsServerSettingsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                     <Grid Margin="0,0,0,16">
@@ -1949,7 +1985,7 @@
             </Border>
 
             <!-- Profile Section -->
-            <Border Grid.Row="13" Style="{StaticResource SettingsSectionCard}"
+            <Border Grid.Row="14" Style="{StaticResource SettingsSectionCard}"
                     Visibility="{Binding IsOwnerProgramSettingsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
@@ -2376,7 +2412,7 @@
             </Border>
 
             <!-- Database Section -->
-            <Border Grid.Row="14" Style="{StaticResource SettingsSectionCard}" Padding="24,22"
+            <Border Grid.Row="15" Style="{StaticResource SettingsSectionCard}" Padding="24,22"
                     Visibility="{Binding IsServerSettingsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
@@ -3183,7 +3219,7 @@
             </Border>
 
             <!-- System Section -->
-            <Border Grid.Row="14" Style="{StaticResource SettingsSectionCard}" Visibility="Collapsed">
+            <Border Grid.Row="15" Style="{StaticResource SettingsSectionCard}" Visibility="Collapsed">
                 <StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -3347,7 +3383,7 @@
             </Border>
 
             <!-- Copyright Card -->
-            <Border Grid.Row="15" Style="{StaticResource SettingsSectionCard}" Padding="18,16"
+            <Border Grid.Row="16" Style="{StaticResource SettingsSectionCard}" Padding="18,16"
                     Visibility="{Binding IsProgramSettingsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">

@@ -12,10 +12,75 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
+        <conv:IndexPlusOneConverter x:Key="IndexPlusOne"/>
         <CubicEase x:Key="SmoothEase" EasingMode="EaseOut"/>
+        <!-- One joined button panel: Edit, then icon actions separated by thin lines -->
+        <Style x:Key="TemplateSegmentButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" Width="38"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1,0,0,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TemplateSegmentDeleteButton" TargetType="Button" BasedOn="{StaticResource TemplateSegmentButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" Width="38" CornerRadius="0,8,8,0"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1,0,0,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TemplateSegmentEditButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8,0,0,8" Padding="13,0">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
     
-    <Grid Background="{DynamicResource PageBackgroundBrush}">
+    <Grid Background="{DynamicResource PageBackgroundBrush}" AllowDrop="True"
+          PreviewDragOver="Page_PreviewDragOver">
         <Grid Margin="{StaticResource PageOuterMargin}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -104,6 +169,7 @@
 
             <!-- ===== TEMPLATE LIST ===== -->
             <ItemsControl Grid.Row="1" ItemsSource="{Binding Templates}" Margin="0,4,0,8"
+                          AlternationCount="100000"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling"
                           ScrollViewer.CanContentScroll="True">
@@ -126,24 +192,42 @@
                                     Background="{DynamicResource CardBackgroundBrush}" 
                                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                     CornerRadius="14" Padding="15,12" Margin="12,4,12,14"
-                                    RenderTransformOrigin="0.5,0.5"
                                     Effect="{x:Null}"
-                                    h:StaggerAnimation.Enable="True">
-                                <Border.RenderTransform>
-                                    <TransformGroup>
-                                        <ScaleTransform x:Name="CardScale" ScaleX="1" ScaleY="1"/>
-                                        <TranslateTransform x:Name="CardTranslate" Y="0"/>
-                                    </TransformGroup>
-                                </Border.RenderTransform>
+                                    AllowDrop="True"
+                                    DragOver="TemplateCard_DragOver"
+                                    DragLeave="TemplateCard_DragLeave"
+                                    Drop="TemplateCard_Drop"
+                                    >
                                 <Grid>
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
+                                    <!-- Drag handle: hold and drag to change the order -->
+                                    <Border Grid.Column="0" Background="Transparent" Cursor="SizeAll" Padding="2,8,10,8"
+                                            VerticalAlignment="Center"
+                                            ToolTip="{DynamicResource TplDragToReorder}"
+                                            PreviewMouseLeftButtonDown="DragHandle_PreviewMouseLeftButtonDown"
+                                            PreviewMouseMove="DragHandle_PreviewMouseMove">
+                                        <TextBlock Text="&#xE76F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                                   Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                                    </Border>
+
+                                    <!-- Position number -->
+                                    <Border Grid.Column="1" Width="26" Height="26" CornerRadius="13" Margin="0,0,12,0"
+                                            VerticalAlignment="Center" Background="{DynamicResource AccentLightBrush}">
+                                        <TextBlock Text="{Binding (ItemsControl.AlternationIndex), RelativeSource={RelativeSource AncestorType=ContentPresenter}, Converter={StaticResource IndexPlusOne}}"
+                                                   FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AccentDarkBrush}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+
                                     <!-- Format badge with gradient -->
-                                    <Border Grid.Column="0" Width="52" Height="52" CornerRadius="14" Margin="0,0,16,0"
+                                    <Border Grid.Column="2" Width="52" Height="52" CornerRadius="14" Margin="0,0,16,0"
                                             VerticalAlignment="Center">
                                         <Border.Style>
                                             <Style TargetType="Border">
@@ -181,7 +265,7 @@
                                     </Border>
 
                                     <!-- Template info -->
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <StackPanel Grid.Column="3" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{DynamicResource FS15}" 
                                                    Foreground="{DynamicResource ForegroundBrush}"
                                                    TextTrimming="CharacterEllipsis"/>
@@ -208,97 +292,51 @@
                                         </StackPanel>
                                     </StackPanel>
 
-                                    <!-- Action buttons -->
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <!-- Edit button -->
-                                        <Button Command="{Binding DataContext.EditTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                CommandParameter="{Binding}"
-                                                Style="{StaticResource FilledActionButton}"
-                                                Padding="14,8"
-                                                Margin="0,0,8,0">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
-                                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                <TextBlock Text="{DynamicResource TplBtnEdit}" FontSize="{DynamicResource FS12}" FontWeight="Medium"
-                                                           Foreground="White" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-
-                                        <!-- Rename button -->
-                                        <Button Command="{Binding DataContext.RenameTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                CommandParameter="{Binding}"
-                                                Style="{StaticResource ToolbarIconButton}"
-                                                Width="38"
-                                                Height="38"
-                                                Margin="0,0,8,0"
-                                                Background="{DynamicResource WarningLightBrush}"
-                                                BorderBrush="{DynamicResource WarningLightBrush}"
-                                                Foreground="{DynamicResource WarningBrush}">
-                                            <TextBlock Text="&#xE8AC;"
-                                                       FontFamily="Segoe MDL2 Assets"
-                                                       FontSize="{DynamicResource FS14}"
-                                                       Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"/>
-                                        </Button>
-
-                                        <!-- Copy to company button -->
-                                        <Button Command="{Binding DataContext.CopyTemplateToCompanyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding}"
-                                                Style="{StaticResource ToolbarIconButton}"
-                                                Width="38"
-                                                Height="38"
-                                                Margin="0,0,8,0"
-                                                ToolTip="{DynamicResource TplCopyToCompanyTooltip}"
-                                                Background="{DynamicResource SurfaceBrush}"
-                                                BorderBrush="{DynamicResource CardBorderBrush}"
-                                                Foreground="{DynamicResource AccentBrush}">
-                                            <TextBlock Text="&#xE8FA;"
-                                                       FontFamily="Segoe MDL2 Assets"
-                                                       FontSize="{DynamicResource FS14}"
-                                                       Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"/>
-                                        </Button>
-
-                                        <!-- Delete button -->
-                                        <Button Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                CommandParameter="{Binding}"
-                                                Style="{StaticResource ToolbarIconButton}"
-                                                Width="38"
-                                                Height="38"
-                                                Background="{DynamicResource ErrorLightBrush}"
-                                                BorderBrush="{DynamicResource ErrorLightBrush}"
-                                                Foreground="{DynamicResource ErrorBrush}">
-                                            <TextBlock Text="&#xE74D;"
-                                                       FontFamily="Segoe MDL2 Assets"
-                                                       FontSize="{DynamicResource FS14}"
-                                                       Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"/>
-                                        </Button>
-                                    </StackPanel>
+                                    <!-- Action panel: Edit, rename, copy to another firm, delete -->
+                                    <Border Grid.Column="4" Height="36" VerticalAlignment="Center" CornerRadius="9"
+                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                            Background="{DynamicResource SurfaceBrush}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{StaticResource TemplateSegmentEditButton}"
+                                                    Command="{Binding DataContext.EditTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                                               Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                    <TextBlock Text="{DynamicResource TplBtnEdit}" FontSize="{DynamicResource FS12}" FontWeight="Medium"
+                                                               Foreground="White" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Style="{StaticResource TemplateSegmentButton}"
+                                                    ToolTip="{DynamicResource TplRenameTitle}"
+                                                    Command="{Binding DataContext.RenameTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}">
+                                                <TextBlock Text="&#xE8AC;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                            </Button>
+                                            <Button Style="{StaticResource TemplateSegmentButton}"
+                                                    ToolTip="{DynamicResource TplCopyToCompanyTooltip}"
+                                                    Command="{Binding DataContext.CopyTemplateToCompanyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}">
+                                                <TextBlock Text="&#xE8FA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                            </Button>
+                                            <Button Style="{StaticResource TemplateSegmentDeleteButton}"
+                                                    ToolTip="{DynamicResource TplBtnDelete}"
+                                                    Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}">
+                                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
                                 </Grid>
                             </Border>
                             <DataTemplate.Triggers>
-                                <EventTrigger RoutedEvent="Border.MouseEnter">
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="CardTranslate" Storyboard.TargetProperty="Y"
-                                                             To="-3" Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="CardScale" Storyboard.TargetProperty="ScaleX"
-                                                             To="1.01" Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="CardScale" Storyboard.TargetProperty="ScaleY"
-                                                             To="1.01" Duration="0:0:0.2"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </EventTrigger>
-                                <EventTrigger RoutedEvent="Border.MouseLeave">
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="CardTranslate" Storyboard.TargetProperty="Y"
-                                                             To="0" Duration="0:0:0.25"/>
-                                            <DoubleAnimation Storyboard.TargetName="CardScale" Storyboard.TargetProperty="ScaleX"
-                                                             To="1" Duration="0:0:0.25"/>
-                                            <DoubleAnimation Storyboard.TargetName="CardScale" Storyboard.TargetProperty="ScaleY"
-                                                             To="1" Duration="0:0:0.25"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </EventTrigger>
+                                <Trigger SourceName="TemplateCard" Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="TemplateCard" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter TargetName="TemplateCard" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                </Trigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -352,7 +390,7 @@
                 </Border.InputBindings>
             </Border>
             <Border Style="{StaticResource AnimatedDialogSectionCard}"
-                    Width="460"
+                    Width="540"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Padding="28"
@@ -381,63 +419,151 @@
                         </Button>
                     </Grid>
 
-                    <Border Style="{StaticResource DialogPreviewSurface}" Padding="16,14" Margin="0,0,0,20">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource TplCopyDialogCompany}" FontSize="{DynamicResource FS13}"
-                                       Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,8"/>
-                            <ComboBox ItemsSource="{Binding CopyTargetCompanies}"
-                                      SelectedItem="{Binding SelectedCopyTargetCompany}"
-                                      TextSearch.TextPath="Name"
-                                      Style="{StaticResource ThemedComboBox}"
-                                      FontSize="{DynamicResource FS13}"
-                                      Margin="0,0,0,14">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Name}"/>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-
-                            <TextBlock Text="{DynamicResource TplCopyDialogName}" FontSize="{DynamicResource FS13}"
-                                       Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,8"/>
-                            <TextBox Text="{Binding CopyTemplateName, UpdateSourceTrigger=PropertyChanged}"
-                                     FontSize="{DynamicResource FS14}" Padding="10,8"
-                                     Background="{DynamicResource CardBackgroundBrush}"
-                                     Foreground="{DynamicResource ForegroundBrush}"
-                                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-                                <TextBox.Resources>
-                                    <Style TargetType="Border">
-                                        <Setter Property="CornerRadius" Value="8"/>
-                                    </Style>
-                                </TextBox.Resources>
-                            </TextBox>
+                    <!-- What is copied, and from where -->
+                    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="10" Padding="12,9" Margin="0,0,0,14">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                       Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <StackPanel>
+                                <TextBlock Text="{Binding CopySourceName}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding CopySourceText}" FontSize="{DynamicResource FS11}"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Command="{Binding CancelCopyTemplateCommand}" Cursor="Hand" Margin="0,0,10,0">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="16,9"
-                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-                                        <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
-                                                   Foreground="{DynamicResource ForegroundBrush}"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-                        <Button Command="{Binding ConfirmCopyTemplateCommand}"
-                                Style="{StaticResource FilledActionButton}"
-                                Padding="18,9">
-                            <TextBlock Text="{DynamicResource TplCopyDialogBtn}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                                       Foreground="White"/>
-                        </Button>
-                    </StackPanel>
+                    <!-- Search -->
+                    <Grid Margin="0,0,0,8">
+                        <TextBox x:Name="CopyFirmSearchBox"
+                                 Text="{Binding CopyFirmSearch, UpdateSourceTrigger=PropertyChanged}"
+                                 FontSize="{DynamicResource FS13}" Padding="32,8,10,8"
+                                 Background="{DynamicResource CardBackgroundBrush}"
+                                 Foreground="{DynamicResource ForegroundBrush}"
+                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                            <TextBox.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="8"/>
+                                </Style>
+                            </TextBox.Resources>
+                        </TextBox>
+                        <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" IsHitTestVisible="False"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        <TextBlock Text="{DynamicResource TplCopySearchPlaceholder}" FontSize="{DynamicResource FS13}" IsHitTestVisible="False"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}" VerticalAlignment="Center" Margin="33,0,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=CopyFirmSearchBox}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+
+                    <!-- Firms with check boxes -->
+                    <Border BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" CornerRadius="10" Margin="0,0,0,14">
+                        <Grid>
+                            <ScrollViewer Style="{StaticResource ThinScroll}" MaxHeight="260" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding VisibleCopyFirms}" Margin="4">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border x:Name="Row" CornerRadius="7" Padding="8,6" Background="Transparent">
+                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalContentAlignment="Center"
+                                                          HorizontalContentAlignment="Stretch" Cursor="Hand">
+                                                    <Grid Margin="6,0,0,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Width="24" Height="24" CornerRadius="12" Margin="0,0,9,0"
+                                                                Background="{DynamicResource AccentLightBrush}">
+                                                            <TextBlock Text="{Binding Initial}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource AccentDarkBrush}"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="{DynamicResource FS13}"
+                                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                                        <Border Grid.Column="2" CornerRadius="10" Padding="8,2" Margin="8,0,0,0"
+                                                                Background="{DynamicResource WarningChipBackgroundBrush}"
+                                                                BorderBrush="{DynamicResource WarningChipBorderBrush}" BorderThickness="1"
+                                                                Visibility="{Binding HasSameName, Converter={StaticResource BoolToVis}}">
+                                                            <TextBlock Text="{DynamicResource TplCopySameNameExists}" FontSize="{DynamicResource FS10}"
+                                                                       Foreground="{DynamicResource WarningChipForegroundBrush}"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </CheckBox>
+                                            </Border>
+                                            <DataTemplate.Triggers>
+                                                <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Row" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                </Trigger>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter TargetName="Row" Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                            <TextBlock Text="{DynamicResource TplCopyNothingFound}" FontSize="{DynamicResource FS12}"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="14,12"
+                                       Visibility="{Binding HasNoVisibleCopyFirms, Converter={StaticResource BoolToVis}}"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Name in the new firms -->
+                    <TextBlock Text="{DynamicResource TplCopyDialogName}" FontSize="{DynamicResource FS13}"
+                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,6"/>
+                    <TextBox Text="{Binding CopyTemplateName, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="{DynamicResource FS14}" Padding="10,8" Margin="0,0,0,18"
+                             Background="{DynamicResource CardBackgroundBrush}"
+                             Foreground="{DynamicResource ForegroundBrush}"
+                             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                        <TextBox.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding SelectedCopyFirmsText}" FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Command="{Binding CancelCopyTemplateCommand}" Cursor="Hand" Margin="0,0,10,0">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="16,9"
+                                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                            <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                            <Button Command="{Binding ConfirmCopyTemplateCommand}"
+                                    Style="{StaticResource FilledActionButton}"
+                                    Padding="18,9">
+                                <TextBlock Text="{Binding CopyButtonText}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                           Foreground="White"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
             </Border>
         </Grid>

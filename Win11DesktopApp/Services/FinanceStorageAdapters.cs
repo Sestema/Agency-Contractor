@@ -383,6 +383,9 @@ namespace Win11DesktopApp.Services
 
         public void ClearActivityLogs()
             => _localDbService.ClearActivityLogs();
+
+        public int DeleteActivityLogEntries(IReadOnlyCollection<string> ids)
+            => _localDbService.DeleteActivityLogEntries(ids);
     }
 
     public sealed class SqliteArchiveLogStorage : IArchiveLogStorage
@@ -405,6 +408,9 @@ namespace Win11DesktopApp.Services
 
         public bool MarkArchiveLogReverted(string operationId, string undoOperationId)
             => _localDbService.MarkArchiveLogReverted(operationId, undoOperationId);
+
+        public int DeleteArchiveLogEntries(IReadOnlyCollection<ArchiveLogEntry> entries)
+            => _localDbService.DeleteArchiveLogEntries(entries);
     }
 
     public sealed class SqliteEmployeeHistoryStorage : IEmployeeHistoryStorage

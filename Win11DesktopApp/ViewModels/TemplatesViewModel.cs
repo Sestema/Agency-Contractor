@@ -89,26 +89,70 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isCopyDialogOpen, value);
         }
 
-        private ObservableCollection<EmployerCompany> _copyTargetCompanies = new();
-        public ObservableCollection<EmployerCompany> CopyTargetCompanies
+        private List<CopyTargetFirmItem> _copyFirmItems = new();
+        private Dictionary<string, HashSet<string>> _copyFirmTemplateNames = new(System.StringComparer.OrdinalIgnoreCase);
+        private int _copyDialogGeneration;
+
+        private ObservableCollection<CopyTargetFirmItem> _visibleCopyFirms = new();
+        public ObservableCollection<CopyTargetFirmItem> VisibleCopyFirms
         {
-            get => _copyTargetCompanies;
-            set => SetProperty(ref _copyTargetCompanies, value);
+            get => _visibleCopyFirms;
+            private set => SetProperty(ref _visibleCopyFirms, value);
         }
 
-        private EmployerCompany? _selectedCopyTargetCompany;
-        public EmployerCompany? SelectedCopyTargetCompany
+        private string _copyFirmSearch = string.Empty;
+        public string CopyFirmSearch
         {
-            get => _selectedCopyTargetCompany;
-            set => SetProperty(ref _selectedCopyTargetCompany, value);
+            get => _copyFirmSearch;
+            set
+            {
+                if (SetProperty(ref _copyFirmSearch, value))
+                    ApplyCopyFirmFilter();
+            }
         }
 
         private string _copyTemplateName = string.Empty;
         public string CopyTemplateName
         {
             get => _copyTemplateName;
-            set => SetProperty(ref _copyTemplateName, value);
+            set
+            {
+                if (SetProperty(ref _copyTemplateName, value))
+                    RefreshSameNameMarks();
+            }
         }
+
+        private string _copySourceText = string.Empty;
+        public string CopySourceText
+        {
+            get => _copySourceText;
+            private set => SetProperty(ref _copySourceText, value);
+        }
+
+        private string _copySourceName = string.Empty;
+        public string CopySourceName
+        {
+            get => _copySourceName;
+            private set => SetProperty(ref _copySourceName, value);
+        }
+
+        private bool _isCopying;
+        public bool IsCopying
+        {
+            get => _isCopying;
+            private set => SetProperty(ref _isCopying, value);
+        }
+
+        public int SelectedCopyFirmCount => _copyFirmItems.Count(item => item.IsSelected);
+        public bool HasNoVisibleCopyFirms => VisibleCopyFirms.Count == 0;
+        public bool CanCopyTemplate => SelectedCopyFirmCount > 0 && !IsCopying && _copyingTemplate != null;
+
+        public string SelectedCopyFirmsText =>
+            string.Format(GetString("TplCopySelectedFmt") ?? "Вибрано фірм: {0}", SelectedCopyFirmCount);
+
+        public string CopyButtonText => SelectedCopyFirmCount > 1
+            ? string.Format(GetString("TplCopyToManyFmt") ?? "Скопіювати ({0})", SelectedCopyFirmCount)
+            : (GetString("TplCopyDialogBtn") ?? "Скопіювати");
 
         private TemplateEntry? _copyingTemplate;
 
@@ -325,7 +369,9 @@ namespace Win11DesktopApp.ViewModels
                 if (o is not TemplateEntry template)
                     return;
 
-                var companies = _companyService.Companies
+                // Hidden firms and firms this user cannot open are not offered as targets.
+                var companies = _companyService.VisibleCompanies
+                    .Where(PolicyService.CanAccessCompany)
                     .Where(c => !string.Equals(c.Name, _firmName, System.StringComparison.OrdinalIgnoreCase))
                     .OrderBy(c => c.Name)
                     .ToList();
@@ -341,58 +387,10 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 _copyingTemplate = template;
-                CopyTargetCompanies = new ObservableCollection<EmployerCompany>(companies);
-                SelectedCopyTargetCompany = CopyTargetCompanies.FirstOrDefault();
-                CopyTemplateName = template.Name;
-                IsCopyDialogOpen = true;
+                OpenCopyDialog(template, companies.Select(company => company.Name));
             });
 
-            ConfirmCopyTemplateCommand = new RelayCommand(o =>
-            {
-                if (!PolicyService.EnsureWriteAllowed("Копіювати шаблон"))
-                    return;
-
-                if (_copyingTemplate == null)
-                {
-                    IsCopyDialogOpen = false;
-                    return;
-                }
-
-                if (SelectedCopyTargetCompany == null)
-                {
-                    MessageBox.Show(
-                        GetString("TplCopySelectCompany") ?? "Select a target company.",
-                        GetString("TitleError") ?? "Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    return;
-                }
-
-                var targetName = CopyTemplateName?.Trim() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(targetName))
-                    targetName = _copyingTemplate.Name;
-
-                try
-                {
-                    var created = _templateService.CopyTemplateToCompany(_firmName, _copyingTemplate, SelectedCopyTargetCompany.Name, targetName);
-                    _activityLogService.Log(
-                        "TemplateCopiedToCompany",
-                        "Template",
-                        SelectedCopyTargetCompany.Name,
-                        "",
-                        $"Скопійовано шаблон «{_copyingTemplate.Name}» з {_firmName} у {SelectedCopyTargetCompany.Name} як «{created.Name}»");
-
-                    CloseCopyDialog();
-                }
-                catch (System.Exception ex)
-                {
-                    MessageBox.Show(
-                        string.Format(GetString("MsgUnexpectedError") ?? "Unexpected error: {0}", ex.Message),
-                        GetString("TitleError") ?? "Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
-                }
-            });
+            ConfirmCopyTemplateCommand = new AsyncRelayCommand(_ => CopyToSelectedFirmsAsync(), _ => CanCopyTemplate);
 
             CancelCopyTemplateCommand = new RelayCommand(o => CloseCopyDialog());
 
@@ -456,13 +454,214 @@ namespace Win11DesktopApp.ViewModels
             CloseCopyDialog();
         }
 
+        private void OpenCopyDialog(TemplateEntry template, IEnumerable<string> firmNames)
+        {
+            var generation = ++_copyDialogGeneration;
+            _copyFirmTemplateNames = new Dictionary<string, HashSet<string>>(System.StringComparer.OrdinalIgnoreCase);
+            _copyFirmItems = firmNames
+                .Select(name => new CopyTargetFirmItem(name, OnCopyFirmSelectionChanged))
+                .ToList();
+
+            CopySourceName = template.Name;
+            CopySourceText = string.Format(GetString("TplCopyFromFmt") ?? "з фірми {0}", _firmName);
+            _copyFirmSearch = string.Empty;
+            OnPropertyChanged(nameof(CopyFirmSearch));
+            _copyTemplateName = template.Name;
+            OnPropertyChanged(nameof(CopyTemplateName));
+            ApplyCopyFirmFilter();
+            OnCopyFirmSelectionChanged();
+            IsCopyDialogOpen = true;
+
+            // Reading every firm's template list is file work, so it runs after the dialog is shown.
+            var names = _copyFirmItems.Select(item => item.Name).ToList();
+            _ = Task.Run(() => names.ToDictionary(
+                    name => name,
+                    name => _templateService.GetTemplates(name)
+                        .Select(existing => existing.Name?.Trim() ?? string.Empty)
+                        .ToHashSet(System.StringComparer.OrdinalIgnoreCase),
+                    System.StringComparer.OrdinalIgnoreCase))
+                .ContinueWith(task =>
+                {
+                    if (task.IsFaulted)
+                    {
+                        LoggingService.LogWarning("TemplatesViewModel.OpenCopyDialog", task.Exception?.GetBaseException().Message ?? string.Empty);
+                        return;
+                    }
+
+                    if (generation != _copyDialogGeneration || !IsCopyDialogOpen)
+                        return;
+
+                    _copyFirmTemplateNames = task.Result;
+                    RefreshSameNameMarks();
+                }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        private void ApplyCopyFirmFilter()
+        {
+            var query = CopyFirmSearch?.Trim() ?? string.Empty;
+            VisibleCopyFirms = new ObservableCollection<CopyTargetFirmItem>(string.IsNullOrEmpty(query)
+                ? _copyFirmItems
+                : _copyFirmItems.Where(item => item.Name.Contains(query, System.StringComparison.CurrentCultureIgnoreCase)));
+            OnPropertyChanged(nameof(HasNoVisibleCopyFirms));
+        }
+
+        private void RefreshSameNameMarks()
+        {
+            var name = CopyTemplateName?.Trim() ?? string.Empty;
+            foreach (var item in _copyFirmItems)
+                item.HasSameName = name.Length > 0
+                    && _copyFirmTemplateNames.TryGetValue(item.Name, out var existing)
+                    && existing.Contains(name);
+        }
+
+        private void OnCopyFirmSelectionChanged()
+        {
+            OnPropertyChanged(nameof(SelectedCopyFirmCount));
+            OnPropertyChanged(nameof(SelectedCopyFirmsText));
+            OnPropertyChanged(nameof(CopyButtonText));
+            OnPropertyChanged(nameof(CanCopyTemplate));
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private async Task CopyToSelectedFirmsAsync()
+        {
+            if (!PolicyService.EnsureWriteAllowed("Копіювати шаблон"))
+                return;
+
+            var template = _copyingTemplate;
+            var targets = _copyFirmItems.Where(item => item.IsSelected).Select(item => item.Name).ToList();
+            if (template == null || targets.Count == 0)
+                return;
+
+            var baseName = string.IsNullOrWhiteSpace(CopyTemplateName) ? template.Name : CopyTemplateName.Trim();
+            var plan = targets
+                .Select(firm => (Firm: firm, Name: BuildUniqueTemplateName(baseName,
+                    _copyFirmTemplateNames.TryGetValue(firm, out var existing) ? existing : null)))
+                .ToList();
+            var sourceFirm = _firmName;
+
+            IsCopying = true;
+            OnCopyFirmSelectionChanged();
+            try
+            {
+                var results = await Task.Run(() => plan.Select(step =>
+                {
+                    try
+                    {
+                        var created = _templateService.CopyTemplateToCompany(sourceFirm, template, step.Firm, step.Name);
+                        return (step.Firm, Created: (TemplateEntry?)created, Error: (string?)null);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        return (step.Firm, Created: (TemplateEntry?)null, Error: (string?)ex.Message);
+                    }
+                }).ToList());
+
+                foreach (var result in results.Where(result => result.Created != null))
+                {
+                    _activityLogService.Log(
+                        "TemplateCopiedToCompany",
+                        "Template",
+                        result.Firm,
+                        "",
+                        $"Скопійовано шаблон «{template.Name}» з {sourceFirm} у {result.Firm} як «{result.Created!.Name}»");
+                }
+
+                var copied = results.Where(result => result.Created != null).Select(result => result.Firm).ToList();
+                var failed = results.Where(result => result.Created == null).ToList();
+                foreach (var failure in failed)
+                    LoggingService.LogWarning("TemplatesViewModel.CopyToSelectedFirmsAsync", $"{failure.Firm}: {failure.Error}");
+
+                if (failed.Count == 0)
+                {
+                    ToastService.Instance.Success(string.Format(GetString("TplCopyDoneFmt") ?? "Скопійовано в: {0}", string.Join(", ", copied)));
+                    CloseCopyDialog();
+                    return;
+                }
+
+                ToastService.Instance.Warning(string.Format(
+                    GetString("TplCopyPartialFmt") ?? "Скопійовано в: {0}. Не вдалося: {1}",
+                    copied.Count == 0 ? "—" : string.Join(", ", copied),
+                    string.Join(", ", failed.Select(failure => failure.Firm))));
+
+                // Keep the dialog open with only the firms that still need the template.
+                foreach (var item in _copyFirmItems)
+                    item.IsSelected = failed.Any(failure => string.Equals(failure.Firm, item.Name, System.StringComparison.OrdinalIgnoreCase));
+            }
+            finally
+            {
+                IsCopying = false;
+                OnCopyFirmSelectionChanged();
+            }
+        }
+
+        /// <summary>"Name", or "Name (2)", "Name (3)"... when the target firm already has that name.</summary>
+        internal static string BuildUniqueTemplateName(string name, ICollection<string>? existingNames)
+        {
+            var baseName = name.Trim();
+            if (existingNames == null || !existingNames.Contains(baseName))
+                return baseName;
+
+            for (var number = 2; ; number++)
+            {
+                var candidate = $"{baseName} ({number})";
+                if (!existingNames.Contains(candidate))
+                    return candidate;
+            }
+        }
+
         private void CloseCopyDialog()
         {
+            _copyDialogGeneration++;
             IsCopyDialogOpen = false;
             _copyingTemplate = null;
-            SelectedCopyTargetCompany = null;
-            CopyTargetCompanies = new ObservableCollection<EmployerCompany>();
-            CopyTemplateName = string.Empty;
+            _copyFirmItems = new List<CopyTargetFirmItem>();
+            _copyFirmTemplateNames = new Dictionary<string, HashSet<string>>(System.StringComparer.OrdinalIgnoreCase);
+            VisibleCopyFirms = new ObservableCollection<CopyTargetFirmItem>();
+            _copyFirmSearch = string.Empty;
+            OnPropertyChanged(nameof(CopyFirmSearch));
+            _copyTemplateName = string.Empty;
+            OnPropertyChanged(nameof(CopyTemplateName));
+            OnCopyFirmSelectionChanged();
+        }
+
+        /// <summary>Puts <paramref name="source"/> before (or after) <paramref name="target"/> and saves the new order.</summary>
+        public void MoveTemplate(TemplateEntry? source, TemplateEntry? target, bool placeAfter = false)
+        {
+            if (source == null || target == null || ReferenceEquals(source, target))
+                return;
+
+            var list = Templates.ToList();
+            var from = list.IndexOf(source);
+            if (from < 0 || !list.Contains(target))
+                return;
+
+            list.RemoveAt(from);
+            var to = list.IndexOf(target) + (placeAfter ? 1 : 0);
+            list.Insert(to, source);
+            if (list.SequenceEqual(Templates))
+                return;
+
+            if (!PolicyService.EnsureWriteAllowed("Змінити порядок шаблонів"))
+                return;
+
+            Templates = new ObservableCollection<TemplateEntry>(list);
+            _ = SaveTemplateOrderAsync(list.Select(template => template.FilePath).ToList());
+        }
+
+        private async Task SaveTemplateOrderAsync(IReadOnlyList<string> orderedPaths)
+        {
+            var firmName = _firmName;
+            try
+            {
+                await Task.Run(() => _templateService.ReorderTemplates(firmName, orderedPaths));
+            }
+            catch (System.Exception ex)
+            {
+                LoggingService.LogError("TemplatesViewModel.SaveTemplateOrderAsync", ex);
+                ToastService.Instance.Warning(GetString("TplOrderSaveFailed") ?? "Не вдалося зберегти порядок шаблонів.");
+                await LoadTemplatesAsync();
+            }
         }
 
         private async Task LoadTemplatesAsync()

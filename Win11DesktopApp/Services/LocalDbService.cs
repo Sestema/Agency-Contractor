@@ -11,32 +11,6 @@ using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
 {
-    public sealed class LocalDbMigrationResult
-    {
-        public bool WasMigrationAttempted { get; init; }
-        public bool IsSuccessful { get; init; }
-        public int RecordsFound { get; init; }
-        public int RecordsImported { get; init; }
-        public int FoldersScanned { get; init; }
-        public int FoldersSkipped { get; init; }
-        public string Message { get; init; } = string.Empty;
-        public string BackupPath { get; init; } = string.Empty;
-    }
-
-    public sealed class SalaryDbMigrationResult
-    {
-        public bool WasMigrationAttempted { get; init; }
-        public bool IsSuccessful { get; init; }
-        public int FilesScanned { get; init; }
-        public int FilesSkipped { get; init; }
-        public int RecordsFound { get; init; }
-        public int RecordsImported { get; init; }
-        public int ExpensesFound { get; init; }
-        public int ExpensesImported { get; init; }
-        public int DatabasesCreated { get; init; }
-        public string Message { get; init; } = string.Empty;
-    }
-
     public sealed class LocalDbService
     {
         private const int CurrentSchemaVersion = 1;
@@ -1428,6 +1402,62 @@ WHERE (@originalFolder <> '' AND lower(employee_folder) = lower(@originalFolder)
             command.ExecuteNonQuery();
         }
 
+        /// <summary>Deletes activity log rows by id. Returns how many rows were removed.</summary>
+        public int DeleteActivityLogEntries(IReadOnlyCollection<string> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return 0;
+
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var transaction = connection.BeginTransaction();
+            var removed = 0;
+            foreach (var id in ids.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal))
+            {
+                using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = "DELETE FROM activity_log WHERE id = @id;";
+                command.Parameters.AddWithValue("@id", id);
+                removed += command.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+            return removed;
+        }
+
+        /// <summary>Deletes archive log rows that match operation id, action, firm and folder exactly.</summary>
+        public int DeleteArchiveLogEntries(IReadOnlyCollection<ArchiveLogEntry> entries)
+        {
+            if (entries == null || entries.Count == 0)
+                return 0;
+
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var transaction = connection.BeginTransaction();
+            var removed = 0;
+            foreach (var entry in entries)
+            {
+                using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = @"
+DELETE FROM archive_log
+WHERE operation_id = @operationId
+  AND action = @action
+  AND firm_name = @firmName
+  AND employee_folder = @employeeFolder
+  AND date = @date;";
+                command.Parameters.AddWithValue("@operationId", entry.OperationId ?? string.Empty);
+                command.Parameters.AddWithValue("@action", entry.Action ?? string.Empty);
+                command.Parameters.AddWithValue("@firmName", entry.FirmName ?? string.Empty);
+                command.Parameters.AddWithValue("@employeeFolder", entry.EmployeeFolder ?? string.Empty);
+                command.Parameters.AddWithValue("@date", entry.Date ?? string.Empty);
+                removed += command.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+            return removed;
+        }
+
         public void ClearActivityLogs()
         {
             EnsureInitialized();
@@ -2254,30 +2284,5 @@ WHERE id IN (
                 || (!string.IsNullOrWhiteSpace(normalizedDeletedFolder)
                     && string.Equals(normalizedEntryFolder, normalizedDeletedFolder, StringComparison.OrdinalIgnoreCase));
         }
-    }
-
-    public sealed class EmployeeHistoryMigrationSource
-    {
-        public string EmployeeId { get; init; } = string.Empty;
-        public string EmployeeFolder { get; init; } = string.Empty;
-        public string FirmName { get; init; } = string.Empty;
-        public string HistoryJsonPath { get; init; } = string.Empty;
-        public IReadOnlyList<EmployeeHistoryEntry> Entries { get; init; } = Array.Empty<EmployeeHistoryEntry>();
-    }
-
-    public sealed class SalaryHistoryMigrationSource
-    {
-        public string EmployeeId { get; init; } = string.Empty;
-        public string EmployeeFolder { get; init; } = string.Empty;
-        public string HistoryJsonPath { get; init; } = string.Empty;
-        public IReadOnlyList<SalaryHistoryRecord> Records { get; init; } = Array.Empty<SalaryHistoryRecord>();
-    }
-
-    public sealed class AdvanceMigrationSource
-    {
-        public string EmployeeId { get; init; } = string.Empty;
-        public string EmployeeFolder { get; init; } = string.Empty;
-        public AdvancePayment Advance { get; init; } = new();
-        public IReadOnlyList<AdvancePayment> Advances => new[] { Advance };
     }
 }

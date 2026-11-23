@@ -228,6 +228,21 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
+        public void ReorderTemplates_SavesOrderAndKeepsUnlistedAtEnd()
+        {
+            var sourceFile = Path.Combine(_testRootPath, "source.docx");
+            File.WriteAllText(sourceFile, "dummy");
+            _templateService.AddTemplate("TestFirm", "Alpha", "Desc", "DOCX", sourceFile);
+            _templateService.AddTemplate("TestFirm", "Beta", "Desc", "DOCX", sourceFile);
+            _templateService.AddTemplate("TestFirm", "Gamma", "Desc", "DOCX", sourceFile);
+            var byName = _templateService.GetTemplates("TestFirm").ToDictionary(t => t.Name, t => t.FilePath);
+
+            _templateService.ReorderTemplates("TestFirm", new[] { byName["Gamma"], byName["Alpha"], "Templates/Missing/template.docx" });
+
+            Assert.Equal(new[] { "Gamma", "Alpha", "Beta" }, _templateService.GetTemplates("TestFirm").Select(t => t.Name));
+        }
+
+        [Fact]
         public void RenameTemplate_SameFolderUpdatesLabelOnly()
         {
             var sourceFile = Path.Combine(_testRootPath, "source.docx");

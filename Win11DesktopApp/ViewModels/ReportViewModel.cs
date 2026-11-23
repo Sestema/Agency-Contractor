@@ -454,15 +454,80 @@ namespace Win11DesktopApp.ViewModels
         public ObservableCollection<MonthlyMovementItem> MonthlyAddedEmployees
         {
             get => _monthlyAddedEmployees;
-            private set => SetProperty(ref _monthlyAddedEmployees, value);
+            private set
+            {
+                if (SetProperty(ref _monthlyAddedEmployees, value))
+                    OnPropertyChanged(nameof(MovementVisibleEmployees));
+            }
         }
 
         private ObservableCollection<MonthlyMovementItem> _monthlyArchivedEmployees = new();
         public ObservableCollection<MonthlyMovementItem> MonthlyArchivedEmployees
         {
             get => _monthlyArchivedEmployees;
-            private set => SetProperty(ref _monthlyArchivedEmployees, value);
+            private set
+            {
+                if (SetProperty(ref _monthlyArchivedEmployees, value))
+                    OnPropertyChanged(nameof(MovementVisibleEmployees));
+            }
         }
+
+        // The report period is chosen in the filters, so the dialog has no period switch and no loading ring.
+        public bool IsMovementLoading => false;
+        public int MovementActiveCount => ActiveEmployees;
+
+        private bool _isMovementArchivedTab;
+        public bool IsMovementArchivedTab
+        {
+            get => _isMovementArchivedTab;
+            set
+            {
+                if (SetProperty(ref _isMovementArchivedTab, value))
+                {
+                    OnPropertyChanged(nameof(IsMovementAddedTab));
+                    OnPropertyChanged(nameof(MovementVisibleEmployees));
+                    OnPropertyChanged(nameof(MovementVisibleEmptyText));
+                }
+            }
+        }
+
+        public bool IsMovementAddedTab => !IsMovementArchivedTab;
+
+        public ObservableCollection<MonthlyMovementItem> MovementVisibleEmployees
+            => IsMovementArchivedTab ? MonthlyArchivedEmployees : MonthlyAddedEmployees;
+
+        public string MovementVisibleEmptyText
+            => IsMovementArchivedTab ? MovementArchivedEmptyText : MovementAddedEmptyText;
+
+        public string MovementNetText
+        {
+            get
+            {
+                var net = NewInPeriod - EndedInPeriod;
+                return net > 0 ? $"+{net}" : net < 0 ? $"\u2212{-net}" : "0";
+            }
+        }
+
+        public string MovementNetCaption => GetString("DashMovementNetCustom");
+
+        private string _movementTopAddedFirmText = string.Empty;
+        public string MovementTopAddedFirmText
+        {
+            get => _movementTopAddedFirmText;
+            private set => SetProperty(ref _movementTopAddedFirmText, value);
+        }
+
+        private string _movementTopArchivedFirmText = string.Empty;
+        public string MovementTopArchivedFirmText
+        {
+            get => _movementTopArchivedFirmText;
+            private set => SetProperty(ref _movementTopArchivedFirmText, value);
+        }
+
+        public ICommand SelectMovementTabCommand { get; }
+
+        /// <summary>Which list dialog to show again when the profile opened from it is closed.</summary>
+        private string? _reopenListAfterDetails;
 
         public ICommand OpenMovementDetailsCommand { get; }
         public ICommand CloseMonthlyMovementDetailsCommand { get; }
@@ -664,6 +729,7 @@ namespace Win11DesktopApp.ViewModels
             OpenEmployeeCommand = new RelayCommand(o => OpenEmployee(o as EmployeeReportRow));
             OpenMovementDetailsCommand = new RelayCommand(_ => OpenMovementDetails(), _ => HasData);
             CloseMonthlyMovementDetailsCommand = new RelayCommand(_ => IsMonthlyMovementDetailsOpen = false);
+            SelectMovementTabCommand = new RelayCommand(o => IsMovementArchivedTab = string.Equals(o?.ToString(), "archived", StringComparison.OrdinalIgnoreCase));
             OpenMovementEmployeeDetailCommand = new RelayCommand(o =>
             {
                 if (o is MonthlyMovementItem item)
@@ -1614,6 +1680,12 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(MonthlyMovementSummaryText));
             OnPropertyChanged(nameof(MonthlyEmployeesAddedCount));
             OnPropertyChanged(nameof(MonthlyEmployeesArchivedCount));
+            OnPropertyChanged(nameof(MovementNetText));
+            OnPropertyChanged(nameof(MovementNetCaption));
+            OnPropertyChanged(nameof(MovementActiveCount));
+            OnPropertyChanged(nameof(MovementVisibleEmptyText));
+            MovementTopAddedFirmText = DashboardViewModel.BuildTopFirmText(MonthlyAddedEmployees, "+");
+            MovementTopArchivedFirmText = DashboardViewModel.BuildTopFirmText(MonthlyArchivedEmployees, "\u2212");
             IsMonthlyMovementDetailsOpen = true;
         }
 
@@ -1635,7 +1707,7 @@ namespace Win11DesktopApp.ViewModels
                 .Select(person =>
                 {
                     var dateText = useEndDate ? person.EndDate : person.StartDate;
-                    return CreateMovementItem(
+                    var item = CreateMovementItem(
                         person.FullName,
                         person.FirmName,
                         dateText,
@@ -1643,8 +1715,13 @@ namespace Win11DesktopApp.ViewModels
                         statusText,
                         statusColor,
                         person.UniqueId);
+                    item.SortDate = DateParsingHelper.TryParseDate(dateText);
+                    item.Initials = DashboardViewModel.BuildInitials(person.FullName);
+                    if (useEndDate)
+                        item.DetailText = DashboardViewModel.BuildWorkedText(person.StartDate, person.EndDate);
+                    return item;
                 })
-                .OrderBy(item => DateParsingHelper.TryParseDate(item.DateText) ?? DateTime.MaxValue)
+                .OrderByDescending(item => item.SortDate ?? DateTime.MinValue)
                 .ThenBy(item => item.FullName, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
@@ -1687,9 +1764,23 @@ namespace Win11DesktopApp.ViewModels
                 EmployeeFolder = item.EmployeeFolder
             };
 
+            var reopen = IsMonthlyMovementDetailsOpen ? "movement" : IsPassportOnlyDetailsOpen ? "passport" : null;
             IsMonthlyMovementDetailsOpen = false;
             IsPassportOnlyDetailsOpen = false;
             OpenEmployee(row);
+
+            if (IsEmployeeDetailsOpen)
+                _reopenListAfterDetails = reopen;
+            else
+                ReopenListDialog(reopen);
+        }
+
+        private void ReopenListDialog(string? which)
+        {
+            if (which == "movement")
+                IsMonthlyMovementDetailsOpen = true;
+            else if (which == "passport")
+                IsPassportOnlyDetailsOpen = true;
         }
 
         private void OpenPassportOnlyDetails()
@@ -2411,6 +2502,7 @@ namespace Win11DesktopApp.ViewModels
 
             CleanupDetailsVm();
             _pendingDetailsRefresh = false;
+            _reopenListAfterDetails = null;
             EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(row.FirmName, resolvedFolder, _employeeService);
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
@@ -2441,6 +2533,9 @@ namespace Win11DesktopApp.ViewModels
         private void OnDetailsClose()
         {
             IsEmployeeDetailsOpen = false;
+            var reopen = _reopenListAfterDetails;
+            _reopenListAfterDetails = null;
+            ReopenListDialog(reopen);
 
             if (_pendingDetailsRefresh)
             {

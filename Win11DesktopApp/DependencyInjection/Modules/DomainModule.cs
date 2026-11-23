@@ -65,6 +65,14 @@ namespace Win11DesktopApp.DependencyInjection
                 sp.GetRequiredService<AppSettingsService>(),
                 sp.GetRequiredService<AppDataStorageFactory>()));
             services.AddSingleton(sp => new CandidateService(sp.GetRequiredService<FolderService>()));
+            services.AddSingleton(sp => new EmployeeHistoryCleanupService(
+                sp.GetRequiredService<EmployeeService>(),
+                sp.GetRequiredService<CompanyService>(),
+                sp.GetRequiredService<ActivityLogService>(),
+                sp.GetRequiredService<SalaryDbService>(),
+                sp.GetRequiredService<FinanceService>(),
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<AppDataStorageFactory>()));
             return services;
         }
     }

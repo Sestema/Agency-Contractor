@@ -510,6 +510,111 @@ WHERE lower(firm_name) = lower(@firmName)
             return $"{firmName ?? string.Empty}\n{employeeKey ?? string.Empty}";
         }
 
+        /// <summary>One saved salary row of a person in a firm, with whether it already holds money or notes.</summary>
+        public sealed class EmployeeFirmSalaryRow
+        {
+            public long Id { get; init; }
+            public int Year { get; init; }
+            public int Month { get; init; }
+            public string FirmName { get; init; } = string.Empty;
+            public string EmployeeId { get; init; } = string.Empty;
+            public string EmployeeFolder { get; init; } = string.Empty;
+            public string FullName { get; init; } = string.Empty;
+            public string HoursWorked { get; init; } = "0";
+            public string HourlyRate { get; init; } = "0";
+            public string Advance { get; init; } = "0";
+            public string SavedNetSalary { get; init; } = "0";
+            public string Status { get; init; } = string.Empty;
+            public string Note { get; init; } = string.Empty;
+            public string CustomValues { get; init; } = "{}";
+            public bool HasMeaningfulData { get; init; }
+        }
+
+        /// <summary>Saved rows of one person in one firm for a month (matched by id, or by folder when the id is empty).</summary>
+        public List<EmployeeFirmSalaryRow> FindEmployeeFirmRows(int year, int month, string firmName, string employeeId, IReadOnlyCollection<string> employeeFolders)
+        {
+            var result = new List<EmployeeFirmSalaryRow>();
+            if (!MonthDbExists(year, month) || string.IsNullOrWhiteSpace(firmName))
+                return result;
+
+            using var connection = OpenMonthConnection(year, month);
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT id, firm_name, employee_id, employee_folder, full_name, hours_worked, hourly_rate, advance,
+       saved_net_salary, status, note, custom_values
+FROM salary_entries
+WHERE lower(firm_name) = lower(@firmName);";
+            command.Parameters.AddWithValue("@firmName", firmName);
+            using var reader = command.ExecuteReader();
+            var folders = new HashSet<string>(employeeFolders ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+            while (reader.Read())
+            {
+                var rowId = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
+                var rowFolder = reader.IsDBNull(3) ? string.Empty : reader.GetString(3);
+                var sameId = !string.IsNullOrWhiteSpace(employeeId) && string.Equals(rowId, employeeId, StringComparison.OrdinalIgnoreCase);
+                var sameFolder = string.IsNullOrWhiteSpace(rowId) && folders.Contains(rowFolder);
+                if (!sameId && !sameFolder)
+                    continue;
+
+                static decimal Num(string text) => decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var value) ? value : 0m;
+                var hours = reader.IsDBNull(5) ? "0" : reader.GetString(5);
+                var advance = reader.IsDBNull(7) ? "0" : reader.GetString(7);
+                var net = reader.IsDBNull(8) ? "0" : reader.GetString(8);
+                var status = reader.IsDBNull(9) ? string.Empty : reader.GetString(9);
+                var note = reader.IsDBNull(10) ? string.Empty : reader.GetString(10);
+                var custom = reader.IsDBNull(11) ? "{}" : reader.GetString(11);
+                result.Add(new EmployeeFirmSalaryRow
+                {
+                    Id = reader.GetInt64(0),
+                    Year = year,
+                    Month = month,
+                    FirmName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                    EmployeeId = rowId,
+                    EmployeeFolder = rowFolder,
+                    FullName = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                    HoursWorked = hours,
+                    HourlyRate = reader.IsDBNull(6) ? "0" : reader.GetString(6),
+                    Advance = advance,
+                    SavedNetSalary = net,
+                    Status = status,
+                    Note = note,
+                    CustomValues = custom,
+                    HasMeaningfulData = Num(hours) != 0m
+                        || Num(advance) != 0m
+                        || Num(net) != 0m
+                        || string.Equals(status, "paid", StringComparison.OrdinalIgnoreCase)
+                        || !string.IsNullOrWhiteSpace(note)
+                        || (!string.IsNullOrWhiteSpace(custom) && !string.Equals(custom.Trim(), "{}", StringComparison.Ordinal))
+                });
+            }
+
+            return result;
+        }
+
+        /// <summary>Deletes saved salary rows by id in one month. Returns how many were removed.</summary>
+        public int DeleteSalaryEntries(int year, int month, IReadOnlyCollection<long> ids)
+        {
+            if (ids == null || ids.Count == 0 || !MonthDbExists(year, month))
+                return 0;
+
+            using var connection = OpenMonthConnection(year, month);
+            using var transaction = connection.BeginTransaction();
+            var removed = 0;
+            foreach (var id in ids.Distinct())
+            {
+                using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = "DELETE FROM salary_entries WHERE id = @id;";
+                command.Parameters.AddWithValue("@id", id);
+                removed += command.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+            if (removed > 0)
+                MarkMonthDbIndexDirty();
+            return removed;
+        }
+
         public void SaveMonthPayments(int year, int month, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses)
         {
             using var connection = OpenMonthConnection(year, month);

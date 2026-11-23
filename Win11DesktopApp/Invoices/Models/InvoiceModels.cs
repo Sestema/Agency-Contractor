@@ -386,12 +386,6 @@ public sealed class InvoiceTrashSummary
     public string TotalLabel => $"{TotalAmount:0.00} {Currency}";
 }
 
-public sealed class InvoiceCatalogStore
-{
-    public ObservableCollection<InvoiceParty> Companies { get; set; } = new();
-    public ObservableCollection<InvoiceParty> Customers { get; set; } = new();
-}
-
 public sealed class InvoiceCatalogItem
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
