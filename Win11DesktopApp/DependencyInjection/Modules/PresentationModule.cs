@@ -33,6 +33,7 @@ namespace Win11DesktopApp.DependencyInjection
             services.AddTransient<ActivityLogViewModel>();
             services.AddTransient<FinanceTablesViewModel>();
             services.AddTransient<CandidatesViewModel>();
+            services.AddTransient<VacanciesViewModel>();
             services.AddTransient<NewsViewModel>();
             return services;
         }

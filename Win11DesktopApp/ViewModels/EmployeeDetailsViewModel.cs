@@ -2403,6 +2403,29 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        /// <summary>Shows the date warnings and asks whether to continue; true when there is nothing to ask.</summary>
+        private static bool ConfirmMoveDateWarnings(IReadOnlyList<Helpers.MoveDateCheck.Warning> warnings, string date, string otherDate)
+        {
+            if (warnings.Count == 0)
+                return true;
+
+            var lines = new List<string>();
+            foreach (var warning in warnings)
+            {
+                lines.Add(warning switch
+                {
+                    Helpers.MoveDateCheck.Warning.EndBeforeStart => string.Format(Res("MoveDateWarnEndBeforeStartFmt"), date, otherDate),
+                    Helpers.MoveDateCheck.Warning.StartBeforeArchiveEnd => string.Format(Res("MoveDateWarnStartBeforeArchiveFmt"), date, otherDate),
+                    _ => string.Format(Res("MoveDateWarnFarFmt"), date)
+                });
+            }
+            lines.Add(string.Empty);
+            lines.Add(Res("MoveDateWarnContinue"));
+
+            return MessageBox.Show(string.Join("\n", lines), Res("MoveDateWarnTitle"),
+                MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
+        }
+
         private async Task ConfirmArchiveAsync()
         {
             if (!PolicyService.EnsureWriteAllowed("Архівувати працівника"))
@@ -2414,19 +2437,20 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
+            // A date that cannot be read is refused; an unusual one only asks for confirmation.
+            if (!Helpers.MoveDateCheck.TryNormalize(ArchiveEndDate, out var normalizedEndDate, out var endDate))
+            {
+                ArchiveStatus = Res("MoveDateInvalid");
+                return;
+            }
+            ArchiveEndDate = normalizedEndDate;
+            var dateWarnings = Helpers.MoveDateCheck.ForArchive(endDate, DateParsingHelper.TryParseDate(Data.StartDate ?? string.Empty), DateTime.Today);
+            if (!ConfirmMoveDateWarnings(dateWarnings, normalizedEndDate, Data.StartDate ?? string.Empty))
+                return;
+
             try
             {
                 SetBusyState(true, Res("DetArchiveTitle") ?? "Перемістити в архів");
-                await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
-                {
-                    EventType = "Archived",
-                    Action = Res("HistoryActionArchive"),
-                    Field = Res("HistoryFieldArchive"),
-                    OldValue = _firmName,
-                    NewValue = ArchiveEndDate,
-                    Description = string.Format(Res("HistoryDescArchive"), _firmName, ArchiveEndDate)
-                });
-
                 PhotoFilePath = string.Empty;
                 HasPhoto = false;
                 PassportFilePath = string.Empty;
@@ -2454,6 +2478,17 @@ namespace Win11DesktopApp.ViewModels
                 var result = await _employeeService.ArchiveEmployee(_employeeFolder, _firmName, ArchiveEndDate);
                 if (result.Success)
                 {
+                    // Written only after the archive really happened, into the person's archive folder.
+                    await _employeeService.AddHistoryEntry(result.ArchiveFolder, Data.UniqueId, new EmployeeHistoryEntry
+                    {
+                        EventType = "Archived",
+                        Action = Res("HistoryActionArchive"),
+                        Field = Res("HistoryFieldArchive"),
+                        OldValue = _firmName,
+                        NewValue = ArchiveEndDate,
+                        Description = string.Format(Res("HistoryDescArchive"), _firmName, ArchiveEndDate)
+                    });
+
                     _activityLogService.Log("EmployeeArchived", "Archive", _firmName, FullName,
                         $"Архівовано {FullName} з {_firmName}, дата закінчення: {ArchiveEndDate}",
                         _firmName, ArchiveEndDate, employeeFolder: _employeeFolder,

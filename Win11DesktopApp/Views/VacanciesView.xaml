@@ -1,0 +1,763 @@
+<UserControl x:Class="Win11DesktopApp.Views.VacanciesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
+             xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
+             mc:Ignorable="d"
+             d:DesignHeight="760" d:DesignWidth="1200">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:InverseBooleanToVisibilityConverter x:Key="InvBoolToVis"/>
+
+        <FontFamily x:Key="VacEmojiFont">Segoe UI, Segoe UI Emoji, Segoe UI Symbol</FontFamily>
+
+        <Style x:Key="VacLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+
+        <Style x:Key="VacSectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="Margin" Value="0,18,0,6"/>
+        </Style>
+
+        <Style x:Key="VacInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+
+        <Style x:Key="VacMultiline" TargetType="TextBox" BasedOn="{StaticResource VacInput}">
+            <Setter Property="AcceptsReturn" Value="True"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalContentAlignment" Value="Top"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        </Style>
+
+        <Style x:Key="VacSoftButton" TargetType="Button">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS12}"/>
+            <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="9" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Rounded frame for an editable ComboBox; the ComboBox itself draws no border -->
+        <Style x:Key="VacComboFrame" TargetType="Border">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusMd}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+            <Setter Property="Padding" Value="2,0,4,0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                    <Setter Property="BorderThickness" Value="1.5"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="VacEditableCombo" TargetType="ComboBox">
+            <Setter Property="IsEditable" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS13}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        </Style>
+
+        <Style x:Key="VacAiButton" TargetType="Button" BasedOn="{StaticResource VacSoftButton}">
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="Background" Value="#1A7F77DD"/>
+            <Setter Property="BorderBrush" Value="#557F77DD"/>
+            <Setter Property="Foreground" Value="#7F77DD"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <Style x:Key="VacFilterButton" TargetType="Button" BasedOn="{StaticResource VacSoftButton}">
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Padding" Value="12,7"/>
+        </Style>
+
+        <Style x:Key="VacChip" TargetType="Border">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="7,1"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+        </Style>
+
+        <Style x:Key="VacProgressTrack" TargetType="Border">
+            <Setter Property="Height" Value="6"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Background" Value="{DynamicResource DividerBrush}"/>
+        </Style>
+
+        <!-- Chips: men / women / couples / anyone -->
+        <DataTemplate x:Key="VacChips">
+            <WrapPanel>
+                <Border Style="{StaticResource VacChip}" Background="#1A378ADD" Visibility="{Binding HasMen, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding MenChip}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="#378ADD"/>
+                </Border>
+                <Border Style="{StaticResource VacChip}" Background="#1AD4537E" Visibility="{Binding HasWomen, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding WomenChip}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="#D4537E"/>
+                </Border>
+                <Border Style="{StaticResource VacChip}" Background="#1A7F77DD" Visibility="{Binding HasCouples, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding CouplesChip}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="#7F77DD"/>
+                </Border>
+                <Border Style="{StaticResource VacChip}" Background="{DynamicResource DividerBrush}" Visibility="{Binding HasAnyone, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding AnyoneChip}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                </Border>
+            </WrapPanel>
+        </DataTemplate>
+
+        <!-- Thin progress bar (width from ProgressRatio) -->
+        <DataTemplate x:Key="VacProgressBar">
+            <Grid Height="6">
+                <Border Style="{StaticResource VacProgressTrack}"/>
+                <Border CornerRadius="3" HorizontalAlignment="Left" Background="#1D9E75">
+                    <Border.Width>
+                        <MultiBinding Converter="{x:Static conv:RatioToWidthConverter.Instance}">
+                            <Binding Path="ProgressRatio"/>
+                            <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}"/>
+                        </MultiBinding>
+                    </Border.Width>
+                </Border>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Status pill -->
+        <DataTemplate x:Key="VacStatusPill">
+            <Border CornerRadius="9" Padding="8,1" x:Name="Pill" Background="#1A1D9E75">
+                <TextBlock x:Name="PillText" Text="{DynamicResource VacStatusOpen}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="#1D9E75"/>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsFilled}" Value="True">
+                    <Setter TargetName="PillText" Property="Text" Value="{DynamicResource VacStatusFilled}"/>
+                    <Setter TargetName="Pill" Property="Background" Value="#1A378ADD"/>
+                    <Setter TargetName="PillText" Property="Foreground" Value="#378ADD"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                    <Setter TargetName="PillText" Property="Text" Value="{DynamicResource VacStatusPaused}"/>
+                    <Setter TargetName="Pill" Property="Background" Value="#1ABA7517"/>
+                    <Setter TargetName="PillText" Property="Foreground" Value="#BA7517"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsClosed}" Value="True">
+                    <Setter TargetName="PillText" Property="Text" Value="{DynamicResource VacStatusClosed}"/>
+                    <Setter TargetName="Pill" Property="Background" Value="{DynamicResource DividerBrush}"/>
+                    <Setter TargetName="PillText" Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource PageBackgroundBrush}">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- HEADER -->
+            <Grid Grid.Row="0" Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
+                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                    </Button>
+                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="#1D9E75">
+                        <TextBlock Text="&#xE821;" Style="{StaticResource PageHeaderIconText}"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource BtnVacancies}" FontSize="{DynamicResource FS24}" Style="{StaticResource PageHeaderTitleText}"/>
+                        <TextBlock Text="{Binding SummaryText}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource VacSoftButton}" Command="{Binding RefreshCommand}" ToolTip="{DynamicResource VacRefresh}">
+                        <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"/>
+                    </Button>
+                    <Button Style="{StaticResource VacSoftButton}" Click="ContactButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource VacContactButton}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource VacSoftButton}" Command="{Binding ExportListCommand}" Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xEA90;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource VacPdfAll}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding AddCommand}" Style="{StaticResource FilledActionButton}">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Foreground="White" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource VacAdd}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="White"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- TOOLBAR -->
+            <Grid Grid.Row="1" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MaxWidth="420"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource ToolbarSearchContainer}" CornerRadius="12" Height="36" Margin="0,0,12,0">
+                    <Grid Margin="12,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="1" BorderThickness="0" Background="Transparent" VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                </Border>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Command="{Binding SetFilterCommand}" CommandParameter="active" Content="{DynamicResource VacFilterActive}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource VacFilterButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Filter}" Value="active">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Command="{Binding SetFilterCommand}" CommandParameter="closed" Content="{DynamicResource VacFilterClosed}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource VacFilterButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Filter}" Value="closed">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Command="{Binding SetFilterCommand}" CommandParameter="all" Content="{DynamicResource VacFilterAll}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource VacFilterButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Filter}" Value="all">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- BODY: list | details -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0.8*" MinWidth="280" MaxWidth="460"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="1.4*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- LIST -->
+                <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"
+                         Visibility="{Binding HasItems, Converter={StaticResource BoolToVis}}">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Margin" Value="0,0,4,8"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Card" CornerRadius="12" Padding="12,10" BorderThickness="1"
+                                                Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}">
+                                            <ContentPresenter/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                <Setter TargetName="Card" Property="BorderThickness" Value="2"/>
+                                                <Setter TargetName="Card" Property="Padding" Value="11,9"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding FirmName}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Position}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                   TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                    <ContentControl Grid.Column="1" Content="{Binding}" ContentTemplate="{StaticResource VacStatusPill}" VerticalAlignment="Top" Margin="6,1,0,0"/>
+                                </Grid>
+                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource VacChips}" Margin="0,7,0,0"/>
+                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource VacProgressBar}" Margin="0,8,0,3"/>
+                                <TextBlock Text="{Binding ProgressText}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Empty list -->
+                <Border Grid.Column="0" Grid.ColumnSpan="3" VerticalAlignment="Center" Style="{StaticResource CompactEmptyStateCard}"
+                        Visibility="{Binding HasItems, Converter={StaticResource InvBoolToVis}}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE821;" Style="{StaticResource CompactEmptyStateIconText}" FontSize="{DynamicResource FS28}" Foreground="#1D9E75"/>
+                        <TextBlock Text="{DynamicResource VacEmpty}" Style="{StaticResource CompactEmptyStateTitleText}"/>
+                        <TextBlock Text="{DynamicResource VacEmptyHint}" Style="{StaticResource CompactEmptyStateDescriptionText}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- DETAILS -->
+                <Border Grid.Column="2" CornerRadius="14" BorderThickness="1" Background="{DynamicResource CardBackgroundBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}"
+                        Visibility="{Binding HasSelected, Converter={StaticResource BoolToVis}}">
+                    <ScrollViewer Style="{StaticResource ThinScroll}" Padding="20,16">
+                        <StackPanel DataContext="{Binding Selected}">
+                            <!-- Title + actions -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding FirmName}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
+                                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource VacStatusPill}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,3,0,0" TextWrapping="Wrap">
+                                        <Run Text="{Binding Position, Mode=OneWay}"/>
+                                        <Run Text="  ·  "/>
+                                        <Run Text="{DynamicResource VacCreatedOn}"/>
+                                        <Run Text="{Binding CreatedText, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                                <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Top" MaxWidth="420">
+                                    <Button Style="{StaticResource VacSoftButton}" Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            ToolTip="{DynamicResource VacEdit}" Margin="0,0,6,6">
+                                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"/>
+                                    </Button>
+                                    <Button Style="{StaticResource VacSoftButton}" Command="{Binding DataContext.ExportPosterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" Margin="0,0,6,6">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xEA90;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{DynamicResource VacPdfPoster}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Command="{Binding DataContext.TogglePausedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" Margin="0,0,6,6">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource VacSoftButton}">
+                                                <Setter Property="Content" Value="{DynamicResource VacPause}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                                                        <Setter Property="Content" Value="{DynamicResource VacResume}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsClosed}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                    <Button Command="{Binding DataContext.ToggleClosedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" Margin="0,0,6,6">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource VacSoftButton}">
+                                                <Setter Property="Content" Value="{DynamicResource VacClose}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsClosed}" Value="True">
+                                                        <Setter Property="Content" Value="{DynamicResource VacReopen}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                    <Button Style="{StaticResource VacSoftButton}" Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            ToolTip="{DynamicResource VacDelete}" Margin="0,0,0,6">
+                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ErrorBrush}"/>
+                                    </Button>
+                                </WrapPanel>
+                            </Grid>
+
+                            <!-- Progress -->
+                            <Border Margin="0,14,0,0" CornerRadius="12" Padding="14,12" Background="{DynamicResource WindowBackgroundBrush}"
+                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding BigProgressText}" FontSize="{DynamicResource FS24}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,12,0"/>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding ProgressText}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
+                                            <TextBlock Text="{Binding BreakdownText}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource VacProgressBar}" Margin="0,10,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Facts -->
+                            <WrapPanel Margin="0,12,0,0">
+                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource VacChips}" Margin="0,0,10,6" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,14,6" Visibility="{Binding HasNeededFrom, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}">
+                                        <Run Text="{DynamicResource VacFrom}"/>
+                                        <Run Text="{Binding NeededFromText, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,14,6" Visibility="{Binding HasPay, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <TextBlock Text="{Binding Pay}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,14,6" Visibility="{Binding HasCity, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="&#xE81D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <TextBlock Text="{Binding City}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
+                                </StackPanel>
+                            </WrapPanel>
+
+                            <StackPanel Visibility="{Binding HasConditions, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{DynamicResource VacConditions}" Style="{StaticResource VacSectionTitle}"/>
+                                <TextBlock Text="{Binding Conditions}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding HasDescription, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{DynamicResource VacDescription}" Style="{StaticResource VacSectionTitle}"/>
+                                <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding HasNotes, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{DynamicResource VacNotes}" Style="{StaticResource VacSectionTitle}"/>
+                                <Border CornerRadius="10" Padding="10,8" Background="#14BA7517">
+                                    <TextBlock Text="{Binding Notes}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Found people -->
+                            <TextBlock Text="{DynamicResource VacFoundTitle}" Style="{StaticResource VacSectionTitle}"/>
+                            <TextBlock Text="{DynamicResource VacFoundHint}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                       TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <ItemsControl ItemsSource="{Binding FoundPeople}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1" Padding="2,6">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding GenderText}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                           VerticalAlignment="Center" Margin="10,0"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding DateText}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                           VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                                <Border Grid.Column="3" CornerRadius="8" Padding="7,1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{DynamicResource DividerBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsAuto}" Value="True">
+                                                                    <Setter Property="Background" Value="#1A1D9E75"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding SourceText}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                </Border>
+                                                <Button Grid.Column="4" Style="{StaticResource ToolbarInlineIconButton}" ToolTip="{DynamicResource VacFoundRemove}"
+                                                        Command="{Binding DataContext.RemovePersonCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}">
+                                                    <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"/>
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Advert: written in the position window, here only shown and copied -->
+                            <Grid Margin="0,18,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{DynamicResource VacAdTitle}" Style="{StaticResource VacSectionTitle}" Margin="0" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1" Style="{StaticResource VacSoftButton}" Margin="0"
+                                        Command="{Binding DataContext.CopyAdCommand, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource VacAdCopy}"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <Border CornerRadius="12" Padding="12,10" Background="{DynamicResource WindowBackgroundBrush}"
+                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                    Visibility="{Binding HasAdText, Converter={StaticResource BoolToVis}}">
+                                <TextBox Text="{Binding AdText, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent"
+                                         Padding="0" MinHeight="0" FocusVisualStyle="{x:Null}" FontFamily="{StaticResource VacEmojiFont}"
+                                         FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}">
+                                    <TextBox.Template>
+                                        <ControlTemplate TargetType="TextBox">
+                                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" VerticalScrollBarVisibility="Disabled"/>
+                                        </ControlTemplate>
+                                    </TextBox.Template>
+                                </TextBox>
+                            </Border>
+                            <TextBlock Text="{DynamicResource VacAdEmpty}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                       TextWrapping="Wrap" Visibility="{Binding HasAdText, Converter={StaticResource InvBoolToVis}}"/>
+
+                            <!-- Firm note: edited in the position window -->
+                            <StackPanel Visibility="{Binding DataContext.HasFirmNote, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Style="{StaticResource VacSectionTitle}">
+                                    <Run Text="{DynamicResource VacFirmNote}"/>
+                                    <Run Text="{Binding FirmName, Mode=OneWay}"/>
+                                </TextBlock>
+                                <Border CornerRadius="10" Padding="10,8" Background="{DynamicResource WindowBackgroundBrush}"
+                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                    <TextBlock Text="{Binding DataContext.FirmNote, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                               FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- EDITOR OVERLAY -->
+        <Grid Panel.ZIndex="100" Visibility="{Binding IsEditorOpen, Converter={StaticResource BoolToVis}}" Style="{StaticResource OverlayFadeInGrid}">
+            <Border Background="{DynamicResource OverlayBrush}"/>
+            <Border Style="{StaticResource ModernDialogCard}" Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="18"
+                    Width="760" MaxHeight="860" Margin="30" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                <Grid DataContext="{Binding Editor}" Margin="24,20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,14"/>
+                    <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="0,0,10,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource VacFieldFirm}" Style="{StaticResource VacLabel}"/>
+                                    <ComboBox Style="{StaticResource ThemedComboBox}" FocusVisualStyle="{x:Null}" Height="34" Margin="0,0,0,10" ItemsSource="{Binding Firms}" SelectedItem="{Binding FirmName}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="{DynamicResource VacFieldPosition}" Style="{StaticResource VacLabel}"/>
+                                    <Border Style="{StaticResource VacComboFrame}" Margin="0,0,0,10">
+                                        <ComboBox Style="{StaticResource VacEditableCombo}"
+                                                  ItemsSource="{Binding PositionChoices}"
+                                                  Text="{Binding Position, UpdateSourceTrigger=PropertyChanged}"
+                                                  ToolTip="{DynamicResource VacFieldPositionHint}"/>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Text="{DynamicResource VacFieldWho}" Style="{StaticResource VacLabel}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource VacFieldMen}" FontSize="{DynamicResource FS11}" Foreground="#378ADD" Margin="0,0,0,3"/>
+                                    <TextBox Style="{StaticResource VacInput}" Text="{Binding Men, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="Digits_PreviewTextInput"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="{DynamicResource VacFieldWomen}" FontSize="{DynamicResource FS11}" Foreground="#D4537E" Margin="0,0,0,3"/>
+                                    <TextBox Style="{StaticResource VacInput}" Text="{Binding Women, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="Digits_PreviewTextInput"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="4">
+                                    <TextBlock Text="{DynamicResource VacFieldCouples}" FontSize="{DynamicResource FS11}" Foreground="#7F77DD" Margin="0,0,0,3"/>
+                                    <TextBox Style="{StaticResource VacInput}" Text="{Binding Couples, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="Digits_PreviewTextInput"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="6">
+                                    <TextBlock Text="{DynamicResource VacFieldAnyone}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,3"/>
+                                    <TextBox Style="{StaticResource VacInput}" Text="{Binding Anyone, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="Digits_PreviewTextInput"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding TotalText}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,-4,0,12"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource VacFieldFrom}" Style="{StaticResource VacLabel}"/>
+                                    <DatePicker Style="{StaticResource ThemedDatePicker}" FocusVisualStyle="{x:Null}" Height="34" Margin="0,0,0,10" SelectedDate="{Binding NeededFrom}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="{DynamicResource VacFieldPay}" Style="{StaticResource VacLabel}"/>
+                                    <TextBox Style="{StaticResource VacInput}" Text="{Binding Pay, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="4">
+                                    <TextBlock Text="{DynamicResource VacFieldCity}" Style="{StaticResource VacLabel}"/>
+                                    <TextBox Style="{StaticResource VacInput}" Text="{Binding City, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Text="{DynamicResource VacFieldConditions}" Style="{StaticResource VacLabel}"/>
+                            <TextBox Style="{StaticResource VacMultiline}" Height="86" Text="{Binding Conditions, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{DynamicResource VacFieldDescription}" Style="{StaticResource VacLabel}" Margin="0" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding AiInfo}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <Button Grid.Column="2" Style="{StaticResource VacAiButton}" Command="{Binding AiWriteCommand}" ToolTip="{DynamicResource VacAiTip}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="✨" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource VacAiWrite}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <TextBox Style="{StaticResource VacMultiline}" Height="70" Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Text="{DynamicResource VacAdTitleLower}" Style="{StaticResource VacLabel}"/>
+                            <TextBox Style="{StaticResource VacMultiline}" Height="120" FontFamily="{StaticResource VacEmojiFont}"
+                                     Text="{Binding AdText, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Text="{DynamicResource VacFieldFirmNote}" Style="{StaticResource VacLabel}"/>
+                            <TextBox Style="{StaticResource VacMultiline}" Height="60" Text="{Binding FirmNote, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Text="{DynamicResource VacFieldNotes}" Style="{StaticResource VacLabel}"/>
+                            <TextBox Style="{StaticResource VacMultiline}" Height="60" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <Grid Grid.Row="2" Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding ErrorText}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ErrorBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        <Button Grid.Column="1" Style="{StaticResource VacSoftButton}" Content="{DynamicResource BtnCancel}" Margin="0,0,8,0" Padding="16,8"
+                                Command="{Binding DataContext.CancelEditorCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                        <Button Grid.Column="2" Style="{StaticResource FilledActionButton}"
+                                Command="{Binding DataContext.SaveEditorCommand, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                            <TextBlock Text="{DynamicResource VacSave}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="White"/>
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- CONTACT OVERLAY -->
+        <Grid Panel.ZIndex="100" Visibility="{Binding IsContactOpen, Converter={StaticResource BoolToVis}}" Style="{StaticResource OverlayFadeInGrid}">
+            <Border Background="{DynamicResource OverlayBrush}" MouseLeftButtonDown="ContactOverlay_MouseLeftButtonDown"/>
+            <Border Style="{StaticResource ModernDialogCard}" Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="18"
+                    Width="440" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                <StackPanel Margin="24,20">
+                    <TextBlock Text="{DynamicResource VacContactTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                    <TextBlock Text="{DynamicResource VacContactHint}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                               TextWrapping="Wrap" Margin="0,4,0,14"/>
+                    <TextBlock Text="{DynamicResource VacContactPhone}" Style="{StaticResource VacLabel}"/>
+                    <TextBox Style="{StaticResource VacInput}" Text="{Binding ContactPhone, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="{DynamicResource VacContactNote}" Style="{StaticResource VacLabel}"/>
+                    <TextBox Style="{StaticResource VacInput}" Text="{Binding ContactNote, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="{DynamicResource VacContactAgency}" Style="{StaticResource VacLabel}"/>
+                    <TextBox Style="{StaticResource VacInput}" Text="{Binding AgencyName, UpdateSourceTrigger=PropertyChanged}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                        <Button Style="{StaticResource VacSoftButton}" Content="{DynamicResource BtnCancel}" Margin="0,0,8,0" Padding="16,8" Click="ContactCancel_Click"/>
+                        <Button Style="{StaticResource FilledActionButton}" Command="{Binding SaveContactCommand}">
+                            <TextBlock Text="{DynamicResource VacSave}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="White"/>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

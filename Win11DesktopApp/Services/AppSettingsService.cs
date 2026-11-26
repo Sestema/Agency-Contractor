@@ -241,9 +241,12 @@ namespace Win11DesktopApp.Services
             public string DashSlot0 { get; set; } = "expiring";
             public string DashSlot1 { get; set; } = "companies";
             public string DashSlot2 { get; set; } = "salary";
+            public string DashSlot3 { get; set; } = "charts";
+            public double DashLeftBottomRatio { get; set; } = 0.42;
             public double DashColumnRatio { get; set; } = 1.0;
             public double DashRowRatio { get; set; } = 0.4;
             public int DashMovementMonthCount { get; set; } = 1;
+            public List<string> DashSalaryChartsOrder { get; set; } = new();
             public int ScanDefaultDpi { get; set; } = 300;
             public int ScanDefaultColorMode { get; set; } = 0;
             public int ScanDefaultSource { get; set; } = 0;

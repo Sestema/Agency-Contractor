@@ -461,6 +461,7 @@ namespace Win11DesktopApp.EmployeeModels
                 "CompanyDeleted" => string.Format(Res("ActLogMsgCompanyDeletedFmt"), entry.FirmName),
                 "EmployeeArchived" => string.Format(Res("ActLogMsgEmployeeArchivedFmt"), employeeName, entry.FirmName, entry.NewValue),
                 "EmployeeRestored" => string.Format(Res("ActLogMsgEmployeeRestoredFmt"), employeeName, entry.FirmName, entry.NewValue),
+                "TransferUndone" => string.Format(Res("ActLogUndoTransferDoneFmt"), employeeName, entry.NewValue, entry.OldValue, entry.NewValue),
                 "AdvanceAdded" => string.Format(Res("ActLogMsgAdvanceAddedFmt"), entry.NewValue, employeeName, entry.FirmName),
                 "AdvanceDeleted" => string.Format(Res("ActLogMsgAdvanceDeletedFmt"),
                     string.IsNullOrWhiteSpace(entry.NewValue) ? ExtractAmount(description) : entry.NewValue,

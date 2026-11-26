@@ -489,9 +489,17 @@
                                                         <DataTrigger Binding="{Binding ActionType}" Value="EmployeeArchived">
                                                             <Setter Property="Visibility" Value="Visible"/>
                                                         </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ActionType}" Value="EmployeeRestored">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                            <Setter Property="ToolTip" Value="{DynamicResource ActLogUndoTransferTip}"/>
+                                                        </DataTrigger>
                                                         <DataTrigger Binding="{Binding RelatedOperationId}" Value="">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
+                                                        <!-- Only actions that can still be undone show the button. -->
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </Trigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Button.Style>
@@ -500,9 +508,18 @@
                                                            FontSize="{DynamicResource FS10}"
                                                            Margin="0,0,5,0"
                                                            VerticalAlignment="Center"/>
-                                                <TextBlock Text="{DynamicResource ActLogUndo}"
-                                                           FontSize="{DynamicResource FS10}"
-                                                           VerticalAlignment="Center"/>
+                                                <TextBlock FontSize="{DynamicResource FS10}" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="{DynamicResource ActLogUndo}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding ActionType}" Value="EmployeeRestored">
+                                                                    <Setter Property="Text" Value="{DynamicResource ActLogUndoTransfer}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
                                             </StackPanel>
                                         </Button>
                                         <TextBlock Text="{Binding ActorName}" FontSize="{DynamicResource FS10}"

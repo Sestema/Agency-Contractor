@@ -40,19 +40,37 @@ namespace Win11DesktopApp.ViewModels
         public int TotalEntries { get; set; }
         public int PaidEntries { get; set; }
         public bool IsFullyPaid => PaidEntries > 0 && PaidEntries == TotalEntries;
-        public double PaidRatio => TotalNet > 0 ? Math.Min(1.0, (double)(TotalPaid / TotalNet)) : 0;
         public string StatusColor => IsFullyPaid ? "#4CAF50" : PaidEntries > 0 ? "#FF9800" : "#E53935";
-        public string StatusIcon => IsFullyPaid ? "\uE73E" : PaidEntries > 0 ? "\uE121" : "\uE783";
         public string GrossText => $"{TotalGross:N0} CZK";
-        public string NetText { get; set; } = "";
-        public string ExpenseText { get; set; } = "";
-        public string GrandTotalText { get; set; } = "";
-        public string PaidText => $"{TotalPaid:N0} / {TotalNet:N0} CZK";
-        public string CountText { get; set; } = "";
-        public bool HasExpenses => TotalExpenses != 0;
+
+        /// <summary>Hours worked per firm in this month (for the "hours by firm" chart).</summary>
+        public Dictionary<string, decimal> HoursByFirm { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        // ===== Table row: gross − advances ± extras/deductions = to pay, + firm expenses = total =====
+
+        /// <summary>Everything added or taken between gross and net except advances (doplatky, ubytování, převod…).</summary>
+        public decimal TotalAdjustments => TotalNet - TotalGross + TotalAdvances;
+
+        /// <summary>No hours entered and nothing paid yet: show "not started" instead of odd negative sums.</summary>
+        public bool IsNotStarted => TotalGross == 0m && PaidEntries == 0;
+
+        public string NotStartedText { get; set; } = "";
+
+        public string GrossCell => IsNotStarted ? "—" : SalaryViewModel.FormatMoney(TotalGross);
+        public string AdvancesCell => IsNotStarted ? "—" : TotalAdvances == 0m ? "0" : "\u2212" + SalaryViewModel.FormatMoney(TotalAdvances);
+        public string AdjustmentsCell => IsNotStarted ? "—" : Signed(TotalAdjustments);
+        public string NetCell => IsNotStarted ? NotStartedText : SalaryViewModel.FormatMoney(TotalNet);
+        public string ExpensesCell => TotalExpenses == 0m ? "0" : "+" + SalaryViewModel.FormatMoney(TotalExpenses);
+        public string TotalCell => IsNotStarted && TotalExpenses == 0m ? "—" : SalaryViewModel.FormatMoney(IsNotStarted ? TotalExpenses : GrandTotal);
+        public string StatusCell => IsFullyPaid ? $"\u2713 {TotalEntries}" : $"{PaidEntries}/{TotalEntries}";
+        public bool IsAdjustmentNegative => TotalAdjustments < 0m;
+
+        private static string Signed(decimal value) => value == 0m
+            ? "0"
+            : (value > 0m ? "+" : "\u2212") + SalaryViewModel.FormatMoney(Math.Abs(value));
     }
 
-    public class DashboardViewModel : ViewModelBase, ICleanable
+    public partial class DashboardViewModel : ViewModelBase, ICleanable
     {
         private readonly NavigationService _navigationService;
         private readonly CompanyService _companyService;
@@ -96,6 +114,11 @@ namespace Win11DesktopApp.ViewModels
 
         private string _slot2 = "salary";
         public string Slot2 { get => _slot2; set => SetProperty(ref _slot2, value); }
+        private string _slot3 = "charts";
+        public string Slot3 { get => _slot3; set => SetProperty(ref _slot3, value); }
+        private double _leftBottomRatio = 0.42;
+        /// <summary>Share of the left column height given to the bottom slot (0.15–0.85).</summary>
+        public double LeftBottomRatio { get => _leftBottomRatio; set => _leftBottomRatio = double.IsFinite(value) ? Math.Clamp(value, 0.15, 0.85) : 0.42; }
 
         private double _columnRatio = 1.0;
         public double ColumnRatio { get => _columnRatio; set => SetProperty(ref _columnRatio, value); }
@@ -1029,8 +1052,31 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
         }
         private void OnDetailsDataChanged(EmployeeDataChangedEventArgs e) => _ = LoadDataAsync();
 
-        private string GetSlot(int index) => index switch { 0 => Slot0, 1 => Slot1, 2 => Slot2, _ => "" };
-        private void SetSlot(int index, string value) { switch (index) { case 0: Slot0 = value; break; case 1: Slot1 = value; break; case 2: Slot2 = value; break; } }
+        private string GetSlot(int index) => index switch { 0 => Slot0, 1 => Slot1, 2 => Slot2, 3 => Slot3, _ => "" };
+        private void SetSlot(int index, string value) { switch (index) { case 0: Slot0 = value; break; case 1: Slot1 = value; break; case 2: Slot2 = value; break; case 3: Slot3 = value; break; } }
+
+        internal static readonly string[] WidgetKeys = { "expiring", "companies", "salary", "charts" };
+
+        /// <summary>
+        /// Each of the four widgets exactly once. Unknown or repeated names (old settings, a
+        /// manual edit) are replaced by the widgets that are missing, in their usual order.
+        /// </summary>
+        internal static string[] NormalizeSlots(params string?[] saved)
+        {
+            var result = new string[WidgetKeys.Length];
+            var used = new HashSet<string>(StringComparer.Ordinal);
+            for (var i = 0; i < result.Length; i++)
+            {
+                var key = i < saved.Length ? saved[i] : null;
+                if (key != null && Array.IndexOf(WidgetKeys, key) >= 0 && used.Add(key))
+                    result[i] = key;
+            }
+
+            var missing = new Queue<string>(WidgetKeys.Where(key => !used.Contains(key)));
+            for (var i = 0; i < result.Length; i++)
+                result[i] ??= missing.Dequeue();
+            return result;
+        }
 
         public void SwapSlots(int a, int b)
         {
@@ -1043,12 +1089,16 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
         private void LoadLayout()
         {
             var s = _appSettingsService.Settings;
-            Slot0 = string.IsNullOrEmpty(s.DashSlot0) ? "expiring" : s.DashSlot0;
-            Slot1 = string.IsNullOrEmpty(s.DashSlot1) ? "companies" : s.DashSlot1;
-            Slot2 = string.IsNullOrEmpty(s.DashSlot2) ? "salary" : s.DashSlot2;
+            var slots = NormalizeSlots(s.DashSlot0, s.DashSlot1, s.DashSlot2, s.DashSlot3);
+            Slot0 = slots[0];
+            Slot1 = slots[1];
+            Slot2 = slots[2];
+            Slot3 = slots[3];
+            LeftBottomRatio = s.DashLeftBottomRatio;
             ColumnRatio = s.DashColumnRatio > 0.1 ? s.DashColumnRatio : 1.0;
             RowRatio = s.DashRowRatio > 0.05 ? s.DashRowRatio : 0.4;
             MovementMonthCount = NormalizeMovementMonthCount(s.DashMovementMonthCount);
+            LoadChartOrder();
         }
 
         public void SaveLayout()
@@ -1057,6 +1107,8 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             s.DashSlot0 = Slot0;
             s.DashSlot1 = Slot1;
             s.DashSlot2 = Slot2;
+            s.DashSlot3 = Slot3;
+            s.DashLeftBottomRatio = LeftBottomRatio;
             s.DashColumnRatio = ColumnRatio;
             s.DashRowRatio = RowRatio;
             _appSettingsService.SaveSettings();
@@ -1107,6 +1159,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                 SalaryMonths = new ObservableCollection<SalaryMonthSummary>(data.SalaryMonths);
                 SalaryTotalText = data.SalaryTotalText;
                 CompanyStats = new ObservableCollection<CompanyStatItem>(data.CompanyStats);
+                ApplyChartData(data);
             }
             catch (OperationCanceledException)
             {
@@ -1182,7 +1235,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             {
                 try
                 {
-                    var employees = _employeeService.GetEmployeesForFirm(company.Name) ?? new List<EmployeeSummary>();
+                    var employees = _employeeService.GetEmployeesForFirm(company.Name, allowIndexRepair: false) ?? new List<EmployeeSummary>();
                     result.TotalEmployees += employees.Count;
 
                     var templates = _templateService.GetTemplates(company.Name) ?? new List<TemplateEntry>();
@@ -1221,6 +1274,10 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                         if (AreEmployeeDocumentsOk(emp))
                             result.DocsOkEmployees++;
                         result.DocsPeople.Add(BuildDocumentStatusPerson(emp, company.Name));
+                        var typeKey = string.IsNullOrWhiteSpace(emp.EmployeeType) ? "other" : emp.EmployeeType;
+                        result.EmployeeTypeCounts[typeKey] = result.EmployeeTypeCounts.GetValueOrDefault(typeKey) + 1;
+                        var genderKey = string.Equals(emp.Gender, "female", StringComparison.OrdinalIgnoreCase) ? "female" : "male";
+                        result.GenderCounts[genderKey] = result.GenderCounts.GetValueOrDefault(genderKey) + 1;
                     }
 
                     result.TotalProblems += companyProblems;
@@ -1333,6 +1390,8 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                         summary.TotalGross += entry.GrossSalary;
                         summary.TotalNet += net;
                         summary.TotalAdvances += entry.Advance;
+                        if (entry.HoursWorked > 0 && !string.IsNullOrWhiteSpace(entry.FirmName))
+                            summary.HoursByFirm[entry.FirmName] = summary.HoursByFirm.GetValueOrDefault(entry.FirmName) + entry.HoursWorked;
                         if (entry.IsPaid)
                         {
                             summary.PaidEntries++;
@@ -1346,10 +1405,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
                 foreach (var s in monthMap.Values)
                 {
-                    s.CountText = $"{s.PaidEntries}/{s.TotalEntries} {Res("DashSalaryWorkers")}";
-                    s.NetText = $"{Res("DashSalaryNet")}: {s.TotalNet:N0} CZK";
-                    s.ExpenseText = s.HasExpenses ? $"{Res("DashSalaryExpenses")}: {s.TotalExpenses:N0} CZK" : "";
-                    s.GrandTotalText = $"{Res("DashSalaryGrandTotal")}: {s.GrandTotal:N0} CZK";
+                    s.NotStartedText = Res("DashSalNotStarted") ?? "не почато";
                     grandGross += s.TotalGross;
                     grandNet += s.TotalNet;
                     grandPaid += s.TotalPaid;
@@ -1582,6 +1638,8 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             public int DocsOkEmployees;
             public int DocsExpiredCount;
             public List<DocumentStatusPerson> DocsPeople = new();
+            public Dictionary<string, int> EmployeeTypeCounts = new(StringComparer.OrdinalIgnoreCase);
+            public Dictionary<string, int> GenderCounts = new(StringComparer.OrdinalIgnoreCase);
             public string TemplateTrend = "";
             public string SalaryTotalText = "";
             public List<MonthlyMovementItem> MonthlyAddedEmployees = new();

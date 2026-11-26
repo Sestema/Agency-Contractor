@@ -1070,6 +1070,42 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
+            // A date that cannot be read is refused; an unusual one only asks for confirmation.
+            if (!Helpers.MoveDateCheck.TryNormalize(NewStartDate, out var normalizedStart, out var startDate))
+            {
+                RestoreStatus = Res("MoveDateInvalid");
+                return;
+            }
+            NewStartDate = normalizedStart;
+            if (!string.IsNullOrWhiteSpace(NewContractSignDate))
+            {
+                if (!Helpers.MoveDateCheck.TryNormalize(NewContractSignDate, out var normalizedContract, out _))
+                {
+                    RestoreStatus = Res("MoveDateInvalid");
+                    return;
+                }
+                NewContractSignDate = normalizedContract;
+            }
+
+            var archiveEnd = EmployeeToRestore.ParsedEndDate ?? DateParsingHelper.TryParseDate(EmployeeToRestore.EndDate ?? string.Empty);
+            var dateWarnings = Helpers.MoveDateCheck.ForRestore(startDate, archiveEnd, DateTime.Today);
+            if (dateWarnings.Count > 0)
+            {
+                var archiveEndText = archiveEnd?.ToString(Helpers.MoveDateCheck.Format, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+                var lines = new List<string>();
+                foreach (var warning in dateWarnings)
+                {
+                    lines.Add(warning == Helpers.MoveDateCheck.Warning.StartBeforeArchiveEnd
+                        ? string.Format(Res("MoveDateWarnStartBeforeArchiveFmt"), normalizedStart, archiveEndText)
+                        : string.Format(Res("MoveDateWarnFarFmt"), normalizedStart));
+                }
+                lines.Add(string.Empty);
+                lines.Add(Res("MoveDateWarnContinue"));
+                if (MessageBox.Show(string.Join("\n", lines), Res("MoveDateWarnTitle"),
+                        MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
+                    return;
+            }
+
             try
             {
                 var positionTitle = SelectedPosition?.Title ?? string.Empty;

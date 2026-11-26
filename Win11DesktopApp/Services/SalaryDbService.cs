@@ -120,6 +120,44 @@ namespace Win11DesktopApp.Services
             return connection;
         }
 
+        /// <summary>
+        /// For reads only. An existing month file with the usual tables is opened without the
+        /// schema check and without PRAGMA journal_mode, so reading never changes the file in
+        /// OneDrive. A missing file or a file without the tables goes the old way.
+        /// </summary>
+        public SqliteConnection OpenMonthConnectionForRead(int year, int month)
+        {
+            var dbPath = ResolveMonthDbPath(year, month);
+            if (string.IsNullOrWhiteSpace(dbPath) || !File.Exists(dbPath))
+                return OpenMonthConnection(year, month);
+
+            SqliteConnection? connection = null;
+            try
+            {
+                connection = new SqliteConnection($"Data Source={dbPath};Cache=Shared;Pooling=False");
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "PRAGMA busy_timeout=5000;";
+                    command.ExecuteNonQuery();
+                }
+
+                using (var check = connection.CreateCommand())
+                {
+                    check.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type = 'table' AND name IN ('salary_entries', 'salary_expenses');";
+                    if (Convert.ToInt32(check.ExecuteScalar(), CultureInfo.InvariantCulture) == 2)
+                        return connection;
+                }
+            }
+            catch (SqliteException ex)
+            {
+                LoggingService.LogWarning("SalaryDbService.OpenMonthConnectionForRead", $"{Path.GetFileName(dbPath)}: {ex.Message}");
+            }
+
+            connection?.Dispose();
+            return OpenMonthConnection(year, month);
+        }
+
         public void ReplaceMonthData(int year, int month, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses)
         {
             using var connection = OpenMonthConnection(year, month);
@@ -187,7 +225,7 @@ GROUP BY status;";
             if (!MonthDbExists(year, month))
                 return (new List<SalaryEntry>(), new List<FirmExpense>());
 
-            using var connection = OpenMonthConnection(year, month);
+            using var connection = OpenMonthConnectionForRead(year, month);
             var entries = new List<SalaryEntry>();
             var expenses = new List<FirmExpense>();
 
@@ -222,7 +260,7 @@ ORDER BY firm_name, name;";
             if (!MonthDbExists(year, month))
                 return new List<FirmExpense>();
 
-            using var connection = OpenMonthConnection(year, month);
+            using var connection = OpenMonthConnectionForRead(year, month);
             var expenses = new List<FirmExpense>();
 
             using var command = connection.CreateCommand();
@@ -252,7 +290,7 @@ ORDER BY firm_name, name;";
                 if (string.Compare(monthKey, beforeMonthKey, StringComparison.Ordinal) >= 0)
                     continue;
 
-                using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                using var connection = OpenMonthConnectionForRead(monthDb.year, monthDb.month);
                 using var command = connection.CreateCommand();
                 command.CommandText = @"
 SELECT saved_net_salary, status
@@ -325,7 +363,7 @@ LIMIT 1;";
                 if (string.Compare(monthKey, beforeMonthKey, StringComparison.Ordinal) >= 0)
                     continue;
 
-                using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                using var connection = OpenMonthConnectionForRead(monthDb.year, monthDb.month);
                 using var command = connection.CreateCommand();
                 command.CommandText = @"
 SELECT employee_id, employee_folder, saved_net_salary, status
@@ -418,7 +456,7 @@ ORDER BY ifnull(updated_at, '') DESC, id DESC;";
                 if (string.Compare(monthKey, beforeMonthKey, StringComparison.Ordinal) >= 0)
                     continue;
 
-                using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                using var connection = OpenMonthConnectionForRead(monthDb.year, monthDb.month);
                 using var command = connection.CreateCommand();
                 command.CommandText = @"
 SELECT firm_name, employee_id, employee_folder, saved_net_salary, status
@@ -537,7 +575,7 @@ WHERE lower(firm_name) = lower(@firmName)
             if (!MonthDbExists(year, month) || string.IsNullOrWhiteSpace(firmName))
                 return result;
 
-            using var connection = OpenMonthConnection(year, month);
+            using var connection = OpenMonthConnectionForRead(year, month);
             using var command = connection.CreateCommand();
             command.CommandText = @"
 SELECT id, firm_name, employee_id, employee_folder, full_name, hours_worked, hourly_rate, advance,
@@ -809,7 +847,7 @@ WHERE lower(firm_name) = lower(@oldName);";
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var monthDb in EnumerateMonthDatabases())
             {
-                using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                using var connection = OpenMonthConnectionForRead(monthDb.year, monthDb.month);
                 using var command = connection.CreateCommand();
                 command.CommandText = @"
 SELECT firm_name, employee_folder
@@ -879,7 +917,7 @@ FROM salary_entries;";
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var monthDb in EnumerateMonthDatabases())
             {
-                using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                using var connection = OpenMonthConnectionForRead(monthDb.year, monthDb.month);
                 using var command = connection.CreateCommand();
                 command.CommandText = "SELECT DISTINCT firm_name FROM salary_entries;";
                 using var reader = command.ExecuteReader();

@@ -359,6 +359,13 @@ namespace Win11DesktopApp.Services
         }
 
         public List<EmployeeSummary> GetEmployeesForFirm(string firmName)
+            => GetEmployeesForFirm(firmName, allowIndexRepair: true);
+
+        /// <param name="allowIndexRepair">
+        /// false = only read (dashboard): a stale index is not rewritten, the list comes from the
+        /// profile files instead and the repair stays for the next normal load.
+        /// </param>
+        public List<EmployeeSummary> GetEmployeesForFirm(string firmName, bool allowIndexRepair)
         {
             var stopwatch = Stopwatch.StartNew();
             var employeesFolder = _folderService.GetEmployeesFolder(firmName);
@@ -399,9 +406,20 @@ namespace Win11DesktopApp.Services
                         var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
                         if (rows.Count > 0)
                         {
+                            // Read-only load: a stale index is read from files, not repaired.
+                            if (!allowIndexRepair && ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, out var readOnlyReason))
+                            {
+                                LoggingService.LogInfo("EmployeeService.GetEmployeesForFirm",
+                                    $"Read-only load for '{firmName}': {readOnlyReason}. Using profile files, index left as is.");
+                                var fromFiles = GetEmployeesForFirmFromFiles(firmName, employeesFolder);
+                                StoreEmployeesForFirmCache(firmName, fromFiles);
+                                return fromFiles;
+                            }
+
                             // 1c: light count vs folders at most once per firm per session.
                             // 1b: on mismatch repair this firm only (never global DELETE ALL).
-                            if (TryConsumeLightIndexCheckForFirm(firmName)
+                            if (allowIndexRepair
+                                && TryConsumeLightIndexCheckForFirm(firmName)
                                 && ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, out var reason))
                             {
                                 rows = TryRepairEmployeeIndexForFirm(
@@ -423,6 +441,13 @@ namespace Win11DesktopApp.Services
 
                         if (!HasAnyEmployeeFolders(employeesFolder))
                             return new List<EmployeeSummary>();
+
+                        if (!allowIndexRepair)
+                        {
+                            var fromFiles = GetEmployeesForFirmFromFiles(firmName, employeesFolder);
+                            StoreEmployeesForFirmCache(firmName, fromFiles);
+                            return fromFiles;
+                        }
 
                         var repairedRows = TryRepairEmployeeIndexForFirm(
                             "EmployeeService.GetEmployeesForFirm",
@@ -1557,9 +1582,8 @@ namespace Win11DesktopApp.Services
             summary.ParsedStartDate = DateParsingHelper.TryParseDate(row.StartDate);
             summary.EndDate = row.EndDate;
             summary.ContractType = row.ContractType;
-            // List/index path must not touch employee.json. Gender for UI list is unused
-            // (no gender ring); profile/wizard still load it from the employee file.
-            summary.Gender = "male";
+            // List/index path must not touch employee.json; the index already keeps the gender.
+            summary.Gender = string.IsNullOrWhiteSpace(row.Gender) ? "male" : row.Gender;
             summary.PhotoPath = hasPhoto ? photoPath : string.Empty;
             summary.HasPhoto = hasPhoto;
             summary.HasPassport = row.HasPassport;
@@ -1677,6 +1701,35 @@ namespace Win11DesktopApp.Services
             }
 
             return string.Empty;
+        }
+
+        // Offline | RecallOnOpen | RecallOnDataAccess: the file is still only in the cloud.
+        private const FileAttributes OnlineOnlyAttributes = (FileAttributes)0x00001000 | (FileAttributes)0x00040000 | (FileAttributes)0x00400000;
+
+        /// <summary>
+        /// True when some employee.json files are OneDrive placeholders not downloaded yet.
+        /// The repair would then index half-synced data, so it waits for the next load.
+        /// </summary>
+        internal static bool HasOnlineOnlyProfiles(string employeesFolder, out int count)
+        {
+            count = 0;
+            try
+            {
+                foreach (var folder in Directory.EnumerateDirectories(employeesFolder))
+                {
+                    var jsonPath = Path.Combine(folder, "employee.json");
+                    if (!File.Exists(jsonPath))
+                        continue;
+                    if ((File.GetAttributes(jsonPath) & OnlineOnlyAttributes) != 0)
+                        count++;
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                return false;
+            }
+
+            return count > 0;
         }
 
         private static bool HasAnyEmployeeFolders(string employeesFolder)
@@ -1989,6 +2042,13 @@ namespace Win11DesktopApp.Services
             {
                 LoggingService.LogWarning(source,
                     $"Firm repair skipped for '{firmName}': employees folder missing.");
+                return _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+            }
+
+            if (HasOnlineOnlyProfiles(employeesFolder, out var onlineOnlyCount))
+            {
+                LoggingService.LogWarning(source,
+                    $"Firm repair skipped for '{firmName}': {onlineOnlyCount} profile file(s) are not downloaded from OneDrive yet.");
                 return _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
             }
 
@@ -2918,6 +2978,10 @@ namespace Win11DesktopApp.Services
         {
             try
             {
+                // Read the archive copy before it is moved, so a wrong transfer can be put back later.
+                var archivedJsonBefore = TryReadText(Path.Combine(archiveEmployeeFolder, "employee.json"));
+                var archivedFilesBefore = ListRelativeFiles(archiveEmployeeFolder);
+
                 var destFolder = await RestoreArchivedEmployeeCore(
                     archiveEmployeeFolder,
                     newFirmName,
@@ -2943,6 +3007,19 @@ namespace Win11DesktopApp.Services
                     Action = "Restored",
                     Date = newStartDate,
                     Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                });
+
+                WriteTransferSnapshot(new TransferSnapshot
+                {
+                    RestoreOperationId = opId,
+                    UniqueId = restoredData?.UniqueId ?? string.Empty,
+                    EmployeeName = restoredData == null ? Path.GetFileName(destFolder) : $"{restoredData.FirstName} {restoredData.LastName}",
+                    OriginalFirm = ReadArchivedFromFirm(archivedJsonBefore),
+                    RestoredFirm = newFirmName,
+                    ArchiveFolder = archiveEmployeeFolder,
+                    RestoredFolder = destFolder,
+                    ArchivedJson = archivedJsonBefore,
+                    Files = archivedFilesBefore.ToList()
                 });
 
                 LoggingService.LogInfo("EmployeeService", $"Employee restored to {newFirmName}: {destFolder}");
@@ -2997,6 +3074,15 @@ namespace Win11DesktopApp.Services
                     return new UndoArchiveResult();
                 }
 
+                var archivedUniqueId = ReadEmployeeUniqueId(archiveFolderPath);
+                var activeFolder = FindActiveEmployeeFolder(archivedUniqueId);
+                if (!string.IsNullOrWhiteSpace(activeFolder))
+                {
+                    LoggingService.LogWarning("EmployeeService.UndoArchiveAsync",
+                        $"Undo blocked: the person is already active in {activeFolder} (operation {operationId})");
+                    return new UndoArchiveResult();
+                }
+
                 var restoredFolder = await RestoreArchivedEmployeeCore(
                     archiveFolderPath,
                     target.FirmName,
@@ -3034,6 +3120,210 @@ namespace Win11DesktopApp.Services
             {
                 LoggingService.LogError("EmployeeService.UndoArchiveAsync", ex);
                 return new UndoArchiveResult();
+            }
+        }
+
+        // ------------------------------------------------------------ transfer undo
+
+        private string GetTransferSnapshotFolder()
+        {
+            var backups = _folderService.GetBackupsFolder();
+            return string.IsNullOrWhiteSpace(backups) ? string.Empty : Path.Combine(backups, "transfer-undo");
+        }
+
+        private string GetTransferSnapshotPath(string restoreOperationId)
+        {
+            var folder = GetTransferSnapshotFolder();
+            if (string.IsNullOrWhiteSpace(folder) || string.IsNullOrWhiteSpace(restoreOperationId)
+                || restoreOperationId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                return string.Empty;
+            return Path.Combine(folder, restoreOperationId + ".json");
+        }
+
+        private void WriteTransferSnapshot(TransferSnapshot snapshot)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(snapshot.ArchivedJson) || string.IsNullOrWhiteSpace(snapshot.OriginalFirm))
+                    return;
+                var path = GetTransferSnapshotPath(snapshot.RestoreOperationId);
+                if (string.IsNullOrWhiteSpace(path))
+                    return;
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                WriteJsonAtomic(path, snapshot);
+
+                // Undo is offered for 10 days; older snapshots are not needed.
+                foreach (var old in Directory.GetFiles(Path.GetDirectoryName(path)!, "*.json"))
+                {
+                    if (File.GetLastWriteTime(old) < DateTime.Now.AddDays(-14))
+                        TryDeleteFile(old);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.WriteTransferSnapshot", ex.Message);
+            }
+        }
+
+        public TransferSnapshot? LoadTransferSnapshot(string restoreOperationId)
+        {
+            var path = GetTransferSnapshotPath(restoreOperationId);
+            return string.IsNullOrWhiteSpace(path) || !File.Exists(path) ? null : ReadJson<TransferSnapshot>(path);
+        }
+
+        public bool HasTransferSnapshot(string restoreOperationId)
+        {
+            var path = GetTransferSnapshotPath(restoreOperationId);
+            return !string.IsNullOrWhiteSpace(path) && File.Exists(path);
+        }
+
+        public void DeleteTransferSnapshot(string restoreOperationId)
+        {
+            var path = GetTransferSnapshotPath(restoreOperationId);
+            if (!string.IsNullOrWhiteSpace(path))
+                TryDeleteFile(path);
+        }
+
+        /// <summary>The folder of an active (not archived) person with this id in any firm, or null.</summary>
+        public string? FindActiveEmployeeFolder(string? uniqueId)
+        {
+            if (string.IsNullOrWhiteSpace(uniqueId) || _companyService == null)
+                return null;
+            foreach (var company in _companyService.Companies.ToList())
+            {
+                var folder = FindEmployeeFolderInFirm(company.Name, uniqueId);
+                if (!string.IsNullOrWhiteSpace(folder))
+                    return folder;
+            }
+            return null;
+        }
+
+        public string? FindEmployeeFolderInFirm(string firmName, string? uniqueId)
+        {
+            if (string.IsNullOrWhiteSpace(firmName) || string.IsNullOrWhiteSpace(uniqueId))
+                return null;
+            var employeesFolder = _folderService.GetEmployeesFolder(firmName);
+            return FindEmployeeFolderByUniqueId(employeesFolder, uniqueId);
+        }
+
+        /// <summary>
+        /// Moves an active person's folder into another firm with the given profile.
+        /// Returns the new folder, or an empty string when nothing was changed.
+        /// </summary>
+        public async Task<string> MoveEmployeeToFirmAsync(string currentFolder, string targetFirm, EmployeeData data)
+        {
+            if (string.IsNullOrWhiteSpace(currentFolder) || !Directory.Exists(currentFolder) || data == null)
+                return string.Empty;
+
+            var employeesFolder = _folderService.GetEmployeesFolder(targetFirm);
+            if (string.IsNullOrWhiteSpace(employeesFolder))
+                return string.Empty;
+            Directory.CreateDirectory(employeesFolder);
+
+            if (!string.IsNullOrWhiteSpace(FindEmployeeFolderByUniqueId(employeesFolder, data.UniqueId)))
+            {
+                LoggingService.LogWarning("EmployeeService.MoveEmployeeToFirmAsync",
+                    $"Move blocked: {data.UniqueId} already exists in {targetFirm}");
+                return string.Empty;
+            }
+
+            var destFolder = ResolveAvailableFolder(employeesFolder,
+                NormalizeFolderName($"{data.FirstName}_{data.LastName} - {data.StartDate}"));
+            if (string.IsNullOrWhiteSpace(destFolder))
+                return string.Empty;
+
+            try
+            {
+                CopyDirectory(currentFolder, destFolder);
+                // Check the copy before the profile is rewritten (the check compares file sizes).
+                var copyComplete = ArchiveCopyContainsAllSourceFiles(currentFolder, destFolder, out _);
+                var jsonPath = Path.Combine(destFolder, "employee.json");
+                if (copyComplete)
+                    WriteJsonAtomic(jsonPath, data);
+
+                var verify = copyComplete ? ReadJson<EmployeeData>(jsonPath) : null;
+                if (verify == null || string.IsNullOrEmpty(verify.FirstName)
+                    || !string.Equals(verify.UniqueId, data.UniqueId, StringComparison.OrdinalIgnoreCase))
+                {
+                    LoggingService.LogWarning("EmployeeService.MoveEmployeeToFirmAsync", $"Copy check failed for {destFolder}");
+                    await TryDeleteDirectoryAsync(destFolder);
+                    return string.Empty;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("EmployeeService.MoveEmployeeToFirmAsync", ex);
+                await TryDeleteDirectoryAsync(destFolder);
+                return string.Empty;
+            }
+
+            await TryCleanupDeferredDirectoryAsync(currentFolder);
+            if (Directory.Exists(currentFolder))
+            {
+                await PendingCleanupService.EnqueueAsync(currentFolder, "undo-transfer-folder");
+                ScheduleDeferredCleanupRetry(currentFolder, "EmployeeService.MoveEmployeeToFirmAsync");
+            }
+
+            _adminMirrorSyncService?.EnqueueEmployeeUpsert(targetFirm, destFolder, data);
+            UpsertEmployeeIndex(destFolder, data, targetFirm);
+            InvalidateEmployeeListCache();
+            _financeService?.CleanupGhostFolders();
+            return destFolder;
+        }
+
+        /// <summary>All files under the folder, relative to it.</summary>
+        internal static IReadOnlyList<string> ListRelativeFiles(string folder)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+                    return Array.Empty<string>();
+                return Directory.GetFiles(folder, "*", SearchOption.AllDirectories)
+                    .Select(file => Path.GetRelativePath(folder, file))
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.ListRelativeFiles", ex.Message);
+                return Array.Empty<string>();
+            }
+        }
+
+        private static string TryReadText(string path)
+        {
+            try
+            {
+                return File.Exists(path) ? SafeFileService.ReadAllText(path, System.Text.Encoding.UTF8) : string.Empty;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.TryReadText", ex.Message);
+                return string.Empty;
+            }
+        }
+
+        private static string ReadArchivedFromFirm(string json)
+        {
+            try
+            {
+                return string.IsNullOrWhiteSpace(json) ? string.Empty : JsonSerializer.Deserialize<EmployeeData>(json)?.ArchivedFromFirm ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private static void TryDeleteFile(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.TryDeleteFile", ex.Message);
             }
         }
 

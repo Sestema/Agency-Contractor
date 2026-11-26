@@ -25,6 +25,7 @@ namespace Win11DesktopApp.Helpers
             ["archive"] = new(208, 228, 190, SaturationScale: 0.55),
             ["activitylog"] = new(50, 30, 345),
             ["candidates"] = new(316, 338, 30),
+            ["vacancies"] = new(160, 182, 42),
             ["aichat"] = new(262, 300, 190),
             ["dashboard"] = new(168, 196, 240),
             ["invoices"] = new(88, 138, 185),

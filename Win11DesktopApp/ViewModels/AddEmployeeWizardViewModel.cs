@@ -1161,6 +1161,28 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        /// <summary>
+        /// Shows a newly cropped photo. Every crop goes to its own file, so the preview always
+        /// refreshes and the person can crop again; the previous temporary crop is removed.
+        /// </summary>
+        private void ReplaceCroppedPhoto(string newPath)
+        {
+            var previous = CroppedPhotoPath;
+            CroppedPhotoPath = newPath;
+            if (string.IsNullOrEmpty(previous) || string.Equals(previous, newPath, StringComparison.OrdinalIgnoreCase)
+                || !previous.StartsWith(_tempFolder, StringComparison.OrdinalIgnoreCase))
+                return;
+            try
+            {
+                if (File.Exists(previous))
+                    File.Delete(previous);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("ReplaceCroppedPhoto", ex.Message);
+            }
+        }
+
         private void ApplyCrop()
         {
             if (_selectedCropTarget == Res("CropPhoto"))
@@ -1174,11 +1196,11 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                var dest = System.IO.Path.Combine(_tempFolder, "employee_photo.jpg");
+                var dest = System.IO.Path.Combine(_tempFolder, $"employee_photo_{Guid.NewGuid():N}.jpg");
                 try
                 {
                     _employeeService.CreateCroppedPhoto(photoSource, CropRect, dest);
-                    CroppedPhotoPath = dest;
+                    ReplaceCroppedPhoto(dest);
                 }
                 catch (Exception ex)
                 {

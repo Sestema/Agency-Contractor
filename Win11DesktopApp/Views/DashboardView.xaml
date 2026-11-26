@@ -308,12 +308,125 @@
         </DataTemplate>
 
         <!-- ===== WIDGET: Salary Overview ===== -->
-        <DataTemplate x:Key="SalaryWidget">
+        <!-- ===== Charts under the salary table: minimal style (big number, one line, thin graphics) ===== -->
+        <Style x:Key="ChartBigNumber" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS20}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+        <Style x:Key="ChartSmallText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS10}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+
+        <!-- One thin bar line: name · 3px bar · number. The bar colour comes from the Tag of the ItemsControl. -->
+        <DataTemplate x:Key="ChartThinBarRow">
+            <Grid Margin="0,3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0.9*"/>
+                    <ColumnDefinition Width="1.2*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding FirmName}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ForegroundBrush}"
+                           TextTrimming="CharacterEllipsis" ToolTip="{Binding FirmName}" VerticalAlignment="Center"/>
+                <Grid Grid.Column="1" Height="3" Margin="8,0" VerticalAlignment="Center">
+                    <Border CornerRadius="1.5" Background="{DynamicResource DividerBrush}"/>
+                    <Border CornerRadius="1.5" HorizontalAlignment="Left"
+                            Background="{Binding Tag, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                        <Border.Width>
+                            <MultiBinding Converter="{x:Static conv:RatioToWidthConverter.Instance}">
+                                <Binding Path="Ratio"/>
+                                <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}"/>
+                            </MultiBinding>
+                        </Border.Width>
+                    </Border>
+                </Grid>
+                <TextBlock Grid.Column="2" Text="{Binding HoursText}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" MinWidth="28" TextAlignment="Right"/>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ChartPayoutsTemplate">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Style="{StaticResource ChartBigNumber}">
+                    <Run Text="{Binding DataContext.PayoutsTotalText, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}"/><Run Text=" Kč" FontSize="{DynamicResource FS11}" FontWeight="Normal" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                </TextBlock>
+                <TextBlock Grid.Row="1" Style="{StaticResource ChartSmallText}" Text="{Binding DataContext.PayoutsSubText, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                <controls:MonthBarsChart Grid.Row="2" MinHeight="50" Margin="0,6,0,0" OutlineMode="True"
+                                         Bars="{Binding DataContext.PayoutBars, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                         PrimaryBrush="{x:Static vm:DashboardViewModel.PayoutBrush}"
+                                         LabelBrush="{DynamicResource SecondaryForegroundBrush}"
+                                         GridBrush="{DynamicResource DividerBrush}"/>
+                <TextBlock Grid.Row="3" Style="{StaticResource ChartSmallText}" Margin="0,4,0,0"
+                           Text="{Binding DataContext.PayoutsMinMaxText, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ChartFirmsTemplate">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Style="{StaticResource ChartBigNumber}">
+                    <Run Text="{Binding DataContext.FirmPeopleTotalText, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding DataContext.FirmPeopleSubText, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}" FontSize="{DynamicResource FS11}" FontWeight="Normal" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                </TextBlock>
+                <ItemsControl Grid.Row="1" Margin="0,8,0,0" Tag="{x:Static vm:DashboardViewModel.PeopleBrush}"
+                              ItemsSource="{Binding DataContext.FirmPeopleItems, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              ItemTemplate="{StaticResource ChartThinBarRow}"/>
+                <TextBlock Grid.Row="2" Style="{StaticResource ChartSmallText}"
+                           Text="{Binding DataContext.FirmPeopleMoreText, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ChartHoursTemplate">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Style="{StaticResource ChartBigNumber}">
+                    <Run Text="{Binding DataContext.HoursTotalText, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}"/><Run Text=" "/><Run Text="{DynamicResource DashChartHoursUnit}" FontSize="{DynamicResource FS11}" FontWeight="Normal" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                </TextBlock>
+                <TextBlock Grid.Row="1" Style="{StaticResource ChartSmallText}" Text="{Binding DataContext.HoursSubText, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                <ItemsControl Grid.Row="2" Margin="0,8,0,0" Tag="{x:Static vm:DashboardViewModel.HoursBrush}"
+                              ItemsSource="{Binding DataContext.FirmHoursItems, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              ItemTemplate="{StaticResource ChartThinBarRow}"/>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ChartWhoTemplate">
+            <StackPanel>
+                <TextBlock Style="{StaticResource ChartBigNumber}">
+                    <Run Text="{Binding DataContext.VisaShareText, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}"/><Run Text=" "/><Run Text="{DynamicResource DashChartOnVisa}" FontSize="{DynamicResource FS11}" FontWeight="Normal" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                </TextBlock>
+                <controls:SegmentBar Height="3" Margin="0,12,0,4" TrackBrush="{DynamicResource DividerBrush}"
+                                     Segments="{Binding DataContext.DocumentSegments, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                <TextBlock Style="{StaticResource ChartSmallText}" TextWrapping="Wrap"
+                           Text="{Binding DataContext.DocumentSummaryText, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                <controls:SegmentBar Height="3" Margin="0,14,0,4" TrackBrush="{DynamicResource DividerBrush}"
+                                     Segments="{Binding DataContext.GenderSegments, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                <TextBlock Style="{StaticResource ChartSmallText}"
+                           Text="{Binding DataContext.GenderSummaryText, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="SalaryWidget">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*" MinHeight="90"/>
                 </Grid.RowDefinitions>
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
@@ -346,69 +459,191 @@
                     </StackPanel>
                 </Border>
 
-                <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}"
-                              Visibility="{Binding DataContext.SalaryMonths.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
-                    <ItemsControl ItemsSource="{Binding DataContext.SalaryMonths, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                <!-- Salary table: gross − advances ± extras/deductions = to pay, + firm expenses = total -->
+                <Grid Grid.Row="2" Visibility="{Binding DataContext.SalaryMonths.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Border BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1.5" Padding="0,0,0,6" Margin="0,0,10,2">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.15*" MinWidth="100"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="0.9*"/>
+                                <ColumnDefinition Width="1.1*"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="0.9*"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="70"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{DynamicResource DashSalColMonth}" TextAlignment="Left" Margin="6,0"
+                                           FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="{DynamicResource DashSalColGross}" TextAlignment="Right" Margin="6,0"
+                                           FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="{DynamicResource DashSalColAdvances}" TextAlignment="Right" Margin="6,0"
+                                           FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Text="{DynamicResource DashSalColAdjust}" TextAlignment="Right" Margin="6,0"
+                                           FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="4" Text="{DynamicResource DashSalColNet}" TextAlignment="Right" Margin="6,0"
+                                           FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="5" Text="{DynamicResource DashSalColExpenses}" TextAlignment="Right" Margin="6,0"
+                                           FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="6" Text="{DynamicResource DashSalColTotal}" TextAlignment="Right" Margin="6,0"
+                                           FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="7" Text="{DynamicResource DashSalColStatus}" TextAlignment="Center" Margin="6,0"
+                                           FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                    <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}">
+                        <ItemsControl ItemsSource="{Binding DataContext.SalaryMonths, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="SalaryRow" Padding="0,7" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1"
+                                            Background="Transparent" CornerRadius="0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="1.15*" MinWidth="100"/>
+                                                <ColumnDefinition Width="1*"/>
+                                                <ColumnDefinition Width="0.9*"/>
+                                                <ColumnDefinition Width="1.1*"/>
+                                                <ColumnDefinition Width="1*"/>
+                                                <ColumnDefinition Width="0.9*"/>
+                                                <ColumnDefinition Width="1*"/>
+                                                <ColumnDefinition Width="70"/>
+                                                        </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding MonthLabel}" Margin="6,0" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding GrossCell}" TextAlignment="Right" Margin="6,0"
+                                                       FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding AdvancesCell}" TextAlignment="Right" Margin="6,0"
+                                                       FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ErrorBrush}" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding AdjustmentsCell}" TextAlignment="Right" Margin="6,0" FontSize="{DynamicResource FS12}"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsAdjustmentNegative}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsNotStarted}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock x:Name="NetCell" Grid.Column="4" Text="{Binding NetCell}" TextAlignment="Right" Margin="6,0" FontSize="{DynamicResource FS12}"
+                                                       FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="5" Text="{Binding ExpensesCell}" TextAlignment="Right" Margin="6,0"
+                                                       FontSize="{DynamicResource FS12}" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="6" Text="{Binding TotalCell}" TextAlignment="Right" Margin="6,0" FontWeight="SemiBold"
+                                                       FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <Border Grid.Column="7" HorizontalAlignment="Center" VerticalAlignment="Center" CornerRadius="9" Padding="7,1"
+                                                    Background="{Binding StatusColor, Converter={StaticResource HexToBrush}, ConverterParameter=0.14}">
+                                                <TextBlock Text="{Binding StatusCell}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                           Foreground="{Binding StatusColor, Converter={StaticResource HexToBrush}}"/>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsNotStarted}" Value="True">
+                                            <Setter TargetName="SalaryRow" Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
+                                            <Setter TargetName="NetCell" Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+                                        </DataTrigger>
+                                        <Trigger SourceName="SalaryRow" Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="SalaryRow" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                        </Trigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+
+            </Grid>
+        </DataTemplate>
+
+        <!-- Charts widget: the four chart blocks; the whole widget moves between slots by its ≡ -->
+        <DataTemplate x:Key="ChartsWidget">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*" MinHeight="120"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <TextBlock Style="{StaticResource DragHandle}" Tag="grip"
+                               MouseLeftButtonDown="Grip_MouseLeftButtonDown"/>
+                    <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                               Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource DashWidgetCharts}" FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}"/>
+                </StackPanel>
+
+                <!-- Four chart blocks: drag a block by ≡ to reorder; 4 / 2 / 1 per row depending on width -->
+                <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled"
+                              SizeChanged="SalaryChartsScroll_SizeChanged">
+                    <ItemsControl ItemsSource="{Binding DataContext.SalaryChartBlocks, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  Loaded="SalaryChartsItems_Loaded">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="4" VerticalAlignment="Top"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Style="{StaticResource DashboardWidgetCard}">
+                                <Border Tag="{Binding}" AllowDrop="True" Margin="0,0,8,8" CornerRadius="10" Padding="10,8"
+                                        Background="{DynamicResource WindowBackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                        DragEnter="ChartBlock_DragEnter" DragOver="ChartBlock_DragOver" DragLeave="ChartBlock_DragLeave" Drop="ChartBlock_Drop">
                                     <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="10"
-                                                Margin="0,0,12,0" VerticalAlignment="Center"
-                                                Background="{Binding StatusColor, Converter={StaticResource HexToBrush}, ConverterParameter=0.12}">
-                                            <TextBlock Text="{Binding StatusIcon}" FontFamily="Segoe MDL2 Assets" FontSize="16"
-                                                       Foreground="{Binding StatusColor, Converter={StaticResource HexToBrush}}"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <Grid Margin="0,0,0,2">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding MonthLabel}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource ForegroundBrush}"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding GrossText}" FontSize="{DynamicResource FS13}"
-                                                           FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"
-                                                           VerticalAlignment="Center"/>
-                                            </Grid>
-                                            <TextBlock Text="{Binding CountText}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                       Margin="0,0,0,4"/>
-                                            <Grid Height="6" Margin="0,0,0,4">
-                                                <Border CornerRadius="3" Background="{DynamicResource WindowBackgroundBrush}"
-                                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0.5"/>
-                                                <Border CornerRadius="3" HorizontalAlignment="Left"
-                                                        Background="{Binding StatusColor, Converter={StaticResource HexToBrush}}">
-                                                    <Border.Width>
-                                                        <MultiBinding Converter="{x:Static conv:RatioToWidthConverter.Instance}">
-                                                            <Binding Path="PaidRatio"/>
-                                                            <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}"/>
-                                                        </MultiBinding>
-                                                    </Border.Width>
-                                                </Border>
-                                            </Grid>
-                                            <Grid Margin="0,0,0,1">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding PaidText}" FontSize="{DynamicResource FS11}"
-                                                           Foreground="{Binding StatusColor, Converter={StaticResource HexToBrush}}"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding NetText}" FontSize="{DynamicResource FS11}"
-                                                           Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                            </Grid>
-                                            <TextBlock Text="{Binding ExpenseText}" FontSize="{DynamicResource FS11}"
-                                                       Foreground="{DynamicResource WarningBrush}" Margin="0,0,0,1"
-                                                       Visibility="{Binding HasExpenses, Converter={StaticResource BoolToVis}}"/>
-                                            <TextBlock Text="{Binding GrandTotalText}" FontSize="{DynamicResource FS11}"
-                                                       FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" FontSize="11" Cursor="SizeAll" Margin="0,1,7,0"
+                                                       Foreground="{DynamicResource TertiaryForegroundBrush}" ToolTip="{DynamicResource DashChartDragHint}"
+                                                       MouseLeftButtonDown="ChartGrip_MouseLeftButtonDown"/>
+                                            <TextBlock FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{DynamicResource DashChartPayouts}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding}" Value="firms"><Setter Property="Text" Value="{DynamicResource DashChartFirms}"/></DataTrigger>
+                                                            <DataTrigger Binding="{Binding}" Value="hours"><Setter Property="Text" Value="{DynamicResource DashChartHours}"/></DataTrigger>
+                                                            <DataTrigger Binding="{Binding}" Value="who"><Setter Property="Text" Value="{DynamicResource DashChartWho}"/></DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
+                                        <ContentControl Grid.Row="1" Content="{Binding}">
+                                            <ContentControl.Style>
+                                                <Style TargetType="ContentControl">
+                                                    <Setter Property="ContentTemplate" Value="{StaticResource ChartPayoutsTemplate}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding}" Value="firms"><Setter Property="ContentTemplate" Value="{StaticResource ChartFirmsTemplate}"/></DataTrigger>
+                                                        <DataTrigger Binding="{Binding}" Value="hours"><Setter Property="ContentTemplate" Value="{StaticResource ChartHoursTemplate}"/></DataTrigger>
+                                                        <DataTrigger Binding="{Binding}" Value="who"><Setter Property="ContentTemplate" Value="{StaticResource ChartWhoTemplate}"/></DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ContentControl.Style>
+                                        </ContentControl>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -621,7 +856,7 @@
             </Border>
         </UniformGrid>
 
-        <!-- Bottom: two columns with GridSplitter -->
+        <!-- Bottom: two columns with GridSplitter; each column holds two slots -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="LeftCol" Width="*"/>
@@ -629,27 +864,69 @@
                 <ColumnDefinition x:Name="RightCol" Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- SLOT 0: Left column (full height) -->
-            <Border x:Name="Slot0Border" Grid.Column="0" Style="{StaticResource WidgetSlot}" Margin="0,0,5,0"
-                    Tag="0" DragEnter="Slot_DragEnter" DragLeave="Slot_DragLeave" Drop="Slot_Drop">
-                <ContentControl x:Name="Slot0Content" IsTabStop="False">
-                    <ContentControl.Style>
-                        <Style TargetType="ContentControl">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Slot0}" Value="expiring">
-                                    <Setter Property="ContentTemplate" Value="{StaticResource ExpiringWidget}"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Slot0}" Value="companies">
-                                    <Setter Property="ContentTemplate" Value="{StaticResource CompaniesWidget}"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Slot0}" Value="salary">
-                                    <Setter Property="ContentTemplate" Value="{StaticResource SalaryWidget}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ContentControl.Style>
-                </ContentControl>
-            </Border>
+            <!-- Left column with 2 slots -->
+            <Grid Grid.Column="0" Margin="0,0,5,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition x:Name="LeftTopRow" Height="*" MinHeight="120"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition x:Name="LeftBottomRow" Height="0.7*" MinHeight="120"/>
+                </Grid.RowDefinitions>
+
+                <!-- SLOT 0: Left top -->
+                <Border x:Name="Slot0Border" Grid.Row="0" Style="{StaticResource WidgetSlot}" Margin="0,0,0,5"
+                        Tag="0" DragEnter="Slot_DragEnter" DragLeave="Slot_DragLeave" Drop="Slot_Drop">
+                    <ContentControl x:Name="Slot0Content" IsTabStop="False">
+                        <ContentControl.Style>
+                            <Style TargetType="ContentControl">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Slot0}" Value="expiring">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource ExpiringWidget}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Slot0}" Value="companies">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource CompaniesWidget}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Slot0}" Value="salary">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource SalaryWidget}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Slot0}" Value="charts">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource ChartsWidget}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ContentControl.Style>
+                    </ContentControl>
+                </Border>
+
+                <!-- Horizontal GridSplitter between left rows -->
+                <GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                              Background="Transparent" Cursor="SizeNS" Focusable="False" FocusVisualStyle="{x:Null}"
+                              DragCompleted="LeftRowSplitter_DragCompleted"/>
+
+                <!-- SLOT 3: Left bottom -->
+                <Border x:Name="Slot3Border" Grid.Row="2" Style="{StaticResource WidgetSlot}" Margin="0,5,0,0"
+                        Tag="3" DragEnter="Slot_DragEnter" DragLeave="Slot_DragLeave" Drop="Slot_Drop">
+                    <ContentControl x:Name="Slot3Content" IsTabStop="False">
+                        <ContentControl.Style>
+                            <Style TargetType="ContentControl">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Slot3}" Value="expiring">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource ExpiringWidget}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Slot3}" Value="companies">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource CompaniesWidget}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Slot3}" Value="salary">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource SalaryWidget}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Slot3}" Value="charts">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource ChartsWidget}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ContentControl.Style>
+                    </ContentControl>
+                </Border>
+            </Grid>
 
             <!-- Vertical GridSplitter between columns -->
             <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch"
@@ -680,6 +957,9 @@
                                     <DataTrigger Binding="{Binding Slot1}" Value="salary">
                                         <Setter Property="ContentTemplate" Value="{StaticResource SalaryWidget}"/>
                                     </DataTrigger>
+                                    <DataTrigger Binding="{Binding Slot1}" Value="charts">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource ChartsWidget}"/>
+                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </ContentControl.Style>
@@ -706,6 +986,9 @@
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding Slot2}" Value="salary">
                                         <Setter Property="ContentTemplate" Value="{StaticResource SalaryWidget}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Slot2}" Value="charts">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource ChartsWidget}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>

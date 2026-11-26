@@ -272,6 +272,304 @@ namespace Win11DesktopApp.Services
             return new HistoryCleanupResult { Success = true, BackupPath = backupPath };
         }
 
+        // ---------------------------------------------------------------- transfer undo
+
+        private static readonly TimeSpan TransferMatchWindow = TimeSpan.FromMinutes(30);
+
+        private sealed class TransferUndoPlan
+        {
+            public string Reason { get; set; } = string.Empty;
+            public TransferSnapshot? Snapshot { get; set; }
+            public EmployeeData? Current { get; set; }
+            public EmployeeData? Archived { get; set; }
+            public string CurrentFolder { get; set; } = string.Empty;
+            public HistoryCleanupPerson Person { get; set; } = new();
+            public List<EmployeeHistoryEntry> HistoryEntries { get; } = new();
+            public List<ArchiveLogEntry> ArchiveEntries { get; } = new();
+            public List<SalaryDbService.EmployeeFirmSalaryRow> SalaryRows { get; } = new();
+        }
+
+        /// <summary>Whether the restore with this operation id can be put back, and why not.</summary>
+        public TransferUndoCheck CheckTransferUndo(string restoreOperationId)
+        {
+            var plan = PrepareTransferUndo(restoreOperationId);
+            return new TransferUndoCheck
+            {
+                Reason = plan.Reason,
+                EmployeeName = plan.Snapshot?.EmployeeName ?? string.Empty,
+                OriginalFirm = plan.Snapshot?.OriginalFirm ?? string.Empty,
+                RestoredFirm = plan.Snapshot?.RestoredFirm ?? string.Empty
+            };
+        }
+
+        /// <summary>
+        /// Puts a person restored into firm B back into firm A as if the archive and the restore never happened:
+        /// the folder goes back to A, the A period is open again with its old dates and position, and the
+        /// "archived" / "restored" records disappear from the employee history and the archive list.
+        /// The activity log keeps everything; the caller adds one record about the undo.
+        /// </summary>
+        public async Task<TransferUndoResult> UndoTransferAsync(string restoreOperationId)
+        {
+            var plan = PrepareTransferUndo(restoreOperationId);
+            if (!string.IsNullOrEmpty(plan.Reason) || plan.Snapshot == null || plan.Current == null || plan.Archived == null)
+                return new TransferUndoResult { Message = plan.Reason };
+
+            var snapshot = plan.Snapshot;
+            var employeeJsonPath = Path.Combine(plan.CurrentFolder, "employee.json");
+            var backupPath = WriteBackup(plan.Person, new
+            {
+                CreatedAt = DateTime.Now,
+                Kind = "transfer-undo",
+                Snapshot = snapshot,
+                EmployeeJsonBefore = File.Exists(employeeJsonPath) ? SafeFileService.ReadAllText(employeeJsonPath, Encoding.UTF8) : string.Empty,
+                plan.HistoryEntries,
+                plan.ArchiveEntries,
+                plan.SalaryRows
+            });
+
+            var profile = BuildUndoneProfile(plan.Current, plan.Archived, snapshot.OriginalFirm);
+            var newFolder = await _employeeService.MoveEmployeeToFirmAsync(plan.CurrentFolder, snapshot.OriginalFirm, profile);
+            if (string.IsNullOrWhiteSpace(newFolder))
+                return new TransferUndoResult { Message = Res("TransferUndoMoveFailed") ?? "The folder could not be moved.", BackupPath = backupPath };
+
+            foreach (var entry in plan.HistoryEntries)
+                await _employeeService.DeleteHistoryEntry(newFolder, profile.UniqueId ?? string.Empty, entry);
+            await _employeeService.RemoveArchiveLogEntriesAsync(plan.ArchiveEntries);
+            foreach (var month in plan.SalaryRows.GroupBy(row => (row.Year, row.Month)))
+                _salaryDbService.DeleteSalaryEntries(month.Key.Year, month.Key.Month, month.Select(row => row.Id).ToList());
+            _employeeService.DeleteTransferSnapshot(restoreOperationId);
+
+            LoggingService.LogInfo("EmployeeHistoryCleanupService",
+                $"Transfer undone for {snapshot.EmployeeName}: {snapshot.OriginalFirm} -> {snapshot.RestoredFirm} -> {snapshot.OriginalFirm}. " +
+                $"history={plan.HistoryEntries.Count}, archive={plan.ArchiveEntries.Count}, salaryRows={plan.SalaryRows.Count}. Backup: {backupPath}");
+
+            return new TransferUndoResult
+            {
+                Success = true,
+                NewFolder = newFolder,
+                BackupPath = backupPath,
+                EmployeeName = snapshot.EmployeeName,
+                OriginalFirm = snapshot.OriginalFirm,
+                RestoredFirm = snapshot.RestoredFirm
+            };
+        }
+
+        private TransferUndoPlan PrepareTransferUndo(string restoreOperationId)
+        {
+            var plan = new TransferUndoPlan();
+            string Stop(string key, string fallback) => plan.Reason = Res(key) ?? fallback;
+
+            if (!IsSupported)
+            {
+                Stop("HistCleanupPostgresBlocked", "Not available in server mode.");
+                return plan;
+            }
+
+            var snapshot = _employeeService.LoadTransferSnapshot(restoreOperationId);
+            plan.Snapshot = snapshot;
+            if (snapshot == null || string.IsNullOrWhiteSpace(snapshot.ArchivedJson) || string.IsNullOrWhiteSpace(snapshot.OriginalFirm))
+            {
+                Stop("TransferUndoNoSnapshot", "There is no saved copy for this restore.");
+                return plan;
+            }
+
+            var archive = _employeeService.LoadArchiveLog();
+            var restored = archive.FirstOrDefault(entry =>
+                string.Equals(entry.Action, "Restored", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(entry.OperationId, restoreOperationId, StringComparison.OrdinalIgnoreCase));
+            var currentFolder = !string.IsNullOrWhiteSpace(restored?.EmployeeFolder) ? restored!.EmployeeFolder : snapshot.RestoredFolder;
+            if (restored == null || string.IsNullOrWhiteSpace(currentFolder) || !Directory.Exists(currentFolder))
+            {
+                Stop("TransferUndoGone", "The person is no longer in this firm.");
+                return plan;
+            }
+
+            var current = _employeeService.LoadEmployeeData(currentFolder);
+            if (current == null || current.IsArchived
+                || !string.Equals(current.UniqueId, snapshot.UniqueId, StringComparison.OrdinalIgnoreCase))
+            {
+                Stop("TransferUndoGone", "The person is no longer in this firm.");
+                return plan;
+            }
+
+            EmployeeData? archived;
+            try { archived = System.Text.Json.JsonSerializer.Deserialize<EmployeeData>(snapshot.ArchivedJson); }
+            catch { archived = null; }
+            if (archived == null)
+            {
+                Stop("TransferUndoNoSnapshot", "There is no saved copy for this restore.");
+                return plan;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_employeeService.FindEmployeeFolderInFirm(snapshot.OriginalFirm, snapshot.UniqueId)))
+            {
+                Stop("TransferUndoAlreadyThere", "The person is already in the first firm.");
+                return plan;
+            }
+
+            var newFiles = NewFilesSince(snapshot.Files, EmployeeService.ListRelativeFiles(currentFolder));
+            if (newFiles.Count > 0)
+            {
+                plan.Reason = string.Format(Res("TransferUndoBlockedFilesFmt") ?? "New files were added in the new firm: {0}",
+                    string.Join(", ", newFiles.Take(3).Select(Path.GetFileName)));
+                return plan;
+            }
+
+            if ((current.RequiredDocumentStatuses ?? new List<RequiredDocumentStatus>()).Any(status => !status.IsPeriodClosed))
+            {
+                Stop("TransferUndoBlockedDocs", "Documents were already marked in the new firm.");
+                return plan;
+            }
+
+            var person = new HistoryCleanupPerson
+            {
+                FullName = snapshot.EmployeeName,
+                UniqueId = snapshot.UniqueId,
+                EmployeeFolder = currentFolder,
+                CurrentFirm = snapshot.RestoredFirm,
+                // Treated as finished here so the salary check looks at the B months themselves.
+                IsArchived = true
+            };
+            plan.Person = person;
+
+            var start = ParseDate(current.StartDate);
+            if (start == null)
+            {
+                Stop("HistCleanupBlockedNoDates", "The period has no clear dates.");
+                return plan;
+            }
+            var end = DateTime.Today > start.Value ? DateTime.Today : start.Value;
+            var salaryCheck = new HistoryCleanupPeriod
+            {
+                Entry = new FirmHistoryEntry
+                {
+                    FirmName = snapshot.RestoredFirm,
+                    StartDate = current.StartDate,
+                    EndDate = end.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)
+                }
+            };
+            AddSalaryFacts(person, current, salaryCheck);
+            if (!string.IsNullOrEmpty(salaryCheck.BlockReason))
+            {
+                plan.Reason = salaryCheck.MoneyFound.Count > 0
+                    ? $"{salaryCheck.BlockReason} {string.Join(", ", salaryCheck.MoneyFound.Take(3))}"
+                    : salaryCheck.BlockReason;
+                return plan;
+            }
+            plan.SalaryRows.AddRange(salaryCheck.SalaryRows);
+
+            var restoredAt = ParseTimestamp(restored.Timestamp) ?? ParseTimestamp(snapshot.CreatedAt) ?? DateTime.Now;
+            var archivedEntry = archive
+                .Where(entry => string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
+                                && !entry.IsReverted
+                                && SameFirm(entry.FirmName, snapshot.OriginalFirm)
+                                && string.Equals(entry.EmployeeFolder?.TrimEnd('\\', '/'), snapshot.ArchiveFolder.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
+                                && (ParseTimestamp(entry.Timestamp) ?? DateTime.MinValue) <= restoredAt)
+                .OrderByDescending(entry => ParseTimestamp(entry.Timestamp) ?? DateTime.MinValue)
+                .FirstOrDefault();
+            plan.ArchiveEntries.Add(restored);
+            if (archivedEntry != null)
+                plan.ArchiveEntries.Add(archivedEntry);
+
+            plan.HistoryEntries.AddRange(SelectTransferHistory(
+                _employeeService.LoadHistory(currentFolder),
+                snapshot.OriginalFirm,
+                snapshot.RestoredFirm,
+                archivedEntry == null ? null : ParseTimestamp(archivedEntry.Timestamp),
+                restoredAt));
+
+            plan.Current = current;
+            plan.Archived = archived;
+            plan.CurrentFolder = currentFolder;
+            return plan;
+        }
+
+        /// <summary>Files that appeared after the restore; service files of the app are ignored.</summary>
+        internal static List<string> NewFilesSince(IEnumerable<string>? before, IEnumerable<string> now)
+        {
+            var known = new HashSet<string>((before ?? Array.Empty<string>()).Select(NormalizeRelative), StringComparer.OrdinalIgnoreCase);
+            return now
+                .Where(file => !IsServiceFile(file) && !known.Contains(NormalizeRelative(file)))
+                .ToList();
+        }
+
+        private static string NormalizeRelative(string path) => path.Replace('/', '\\').Trim('\\');
+
+        private static bool IsServiceFile(string relativePath)
+        {
+            var name = Path.GetFileName(relativePath);
+            return name.Equals("employee.json", StringComparison.OrdinalIgnoreCase)
+                   || name.StartsWith("history.json", StringComparison.OrdinalIgnoreCase)
+                   || name.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase)
+                   || name.Equals("Thumbs.db", StringComparison.OrdinalIgnoreCase)
+                   || name.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)
+                   || name.StartsWith("~$", StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// The profile after the undo: today's profile with the firm A values from the archive copy
+        /// (start date, contract, position, address, document package and firm periods) and the A period open again.
+        /// </summary>
+        internal static EmployeeData BuildUndoneProfile(EmployeeData current, EmployeeData archived, string originalFirm)
+        {
+            current.StartDate = archived.StartDate;
+            current.ContractSignDate = archived.ContractSignDate;
+            current.PositionTag = archived.PositionTag;
+            current.PositionNumber = archived.PositionNumber;
+            current.WorkAddressTag = archived.WorkAddressTag;
+            current.RequiredDocumentStatuses = archived.RequiredDocumentStatuses ?? new List<RequiredDocumentStatus>();
+            current.FirmHistory = (archived.FirmHistory ?? new List<FirmHistoryEntry>())
+                .Select(entry => new FirmHistoryEntry { FirmName = entry.FirmName, StartDate = entry.StartDate, EndDate = entry.EndDate })
+                .ToList();
+
+            // Same as undoing an archive: the A period has no end any more.
+            var open = current.FirmHistory.LastOrDefault(entry =>
+                SameFirm(entry.FirmName, originalFirm)
+                && string.Equals(entry.StartDate?.Trim(), archived.StartDate?.Trim(), StringComparison.Ordinal));
+            if (open != null)
+                open.EndDate = string.Empty;
+
+            current.EndDate = string.Empty;
+            current.IsArchived = false;
+            current.ArchivedFromFirm = string.Empty;
+            current.Status = "Active";
+            return current;
+        }
+
+        /// <summary>The "archived from A" and "restored into B" records of this one transfer.</summary>
+        internal static List<EmployeeHistoryEntry> SelectTransferHistory(
+            IEnumerable<EmployeeHistoryEntry> history,
+            string originalFirm,
+            string restoredFirm,
+            DateTime? archivedAt,
+            DateTime restoredAt)
+        {
+            var items = history.ToList();
+            var result = new List<EmployeeHistoryEntry>();
+
+            var restoredItem = items
+                .Where(item => item.EventType == "Restored" && SameFirm(item.Field, restoredFirm)
+                               && (item.Timestamp - restoredAt).Duration() <= TransferMatchWindow)
+                .OrderBy(item => (item.Timestamp - restoredAt).Duration())
+                .FirstOrDefault();
+            if (restoredItem != null)
+                result.Add(restoredItem);
+
+            var archivedCandidates = items
+                .Where(item => item.EventType == "Archived" && SameFirm(item.OldValue, originalFirm)
+                               && item.Timestamp <= restoredAt + TransferMatchWindow);
+            var archivedItem = archivedAt == null
+                ? archivedCandidates.OrderByDescending(item => item.Timestamp).FirstOrDefault()
+                : archivedCandidates
+                    .Where(item => (item.Timestamp - archivedAt.Value).Duration() <= TransferMatchWindow)
+                    .OrderBy(item => (item.Timestamp - archivedAt.Value).Duration())
+                    .FirstOrDefault();
+            if (archivedItem != null)
+                result.Add(archivedItem);
+
+            return result;
+        }
+
         // ---------------------------------------------------------------- matching
 
         internal static List<HistoryCleanupPeriod> BuildPeriods(

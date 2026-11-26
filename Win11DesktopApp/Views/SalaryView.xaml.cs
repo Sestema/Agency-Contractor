@@ -38,6 +38,15 @@ namespace Win11DesktopApp.Views
         {
             InitializeComponent();
             Language = XmlLanguage.GetLanguage(Thread.CurrentThread.CurrentUICulture.IetfLanguageTag);
+            // The column header marks the gripper drag as handled, so listen with handledEventsToo.
+            SalaryGrid.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler(SalaryGrid_ColumnResizeStarted), true);
+            SalaryGrid.AddHandler(Thumb.DragDeltaEvent, new DragDeltaEventHandler(SalaryGrid_ColumnResizeDelta), true);
+            SalaryGrid.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(SalaryGrid_ColumnResizeCompleted), true);
+            // A Border's rounded corners don't clip its content, so clip the grid to the same rounded shape:
+            // the dark header then gets rounded left and right ends like the card around it.
+            SalaryGrid.SizeChanged += (_, _) => ClipSalaryGridCorners();
+            DataGridBorder.SizeChanged += (_, _) => ClipSalaryGridCorners();
+            SalaryGrid.LayoutUpdated += (_, _) => ClipSalaryGridCornersIfMoved();
             DataContextChanged += OnDataContextChanged;
             Loaded += SalaryView_Loaded;
             PreviewMouseDown += SalaryView_PreviewMouseDown;
@@ -70,16 +79,6 @@ namespace Win11DesktopApp.Views
                 SearchBox.SelectAll();
                 e.Handled = true;
             }
-        }
-
-        private void ExpenseField_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key != Key.Enter || sender is not TextBox textBox)
-                return;
-
-            textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
-            Keyboard.ClearFocus();
-            e.Handled = true;
         }
 
         private void CommitGridEdits_BeforeAction(object sender, MouseButtonEventArgs e)
@@ -128,6 +127,7 @@ namespace Win11DesktopApp.Views
                 foreach (var entry in oldVm.Entries)
                     entry.PropertyChanged -= OnEntryPropertyChanged;
                 oldVm.Entries.CollectionChanged -= OnEntriesCollectionChanged;
+                oldVm.ExpenseAmountFocusRequested -= FocusNewExpenseAmount;
             }
 
             if (e.NewValue is SalaryViewModel vm)
@@ -139,6 +139,92 @@ namespace Win11DesktopApp.Views
                 foreach (var entry in vm.Entries)
                     entry.PropertyChanged += OnEntryPropertyChanged;
                 vm.Entries.CollectionChanged += OnEntriesCollectionChanged;
+                vm.ExpenseAmountFocusRequested += FocusNewExpenseAmount;
+            }
+        }
+
+        // ===== Firm expenses: keyboard flow name -> amount -> Enter =====
+
+        private void FocusNewExpenseAmount()
+        {
+            NewExpenseAmountBox.Focus();
+            NewExpenseAmountBox.SelectAll();
+        }
+
+        private void NewExpenseName_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (DataContext is not SalaryViewModel vm)
+                return;
+
+            if (e.Key == Key.Down && vm.IsExpenseSuggestionsOpen && ExpenseSuggestionList.Items.Count > 0)
+            {
+                ExpenseSuggestionList.SelectedIndex = 0;
+                (ExpenseSuggestionList.ItemContainerGenerator.ContainerFromIndex(0) as ListBoxItem)?.Focus();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Enter)
+            {
+                vm.IsExpenseSuggestionsOpen = false;
+                FocusNewExpenseAmount();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape && vm.IsExpenseSuggestionsOpen)
+            {
+                vm.IsExpenseSuggestionsOpen = false;
+                e.Handled = true;
+            }
+        }
+
+        private void NewExpenseAmount_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter || DataContext is not SalaryViewModel vm)
+                return;
+
+            e.Handled = true;
+            if (vm.AddNewExpenseCommand.CanExecute(null))
+            {
+                vm.AddNewExpenseCommand.Execute(null);
+                NewExpenseNameBox.Focus();
+            }
+        }
+
+        private void ExpenseSuggestionList_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (DataContext is not SalaryViewModel vm)
+                return;
+
+            if (e.Key == Key.Enter && ExpenseSuggestionList.SelectedItem is ExpenseSuggestion suggestion)
+            {
+                vm.PickExpenseSuggestionCommand.Execute(suggestion);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                vm.IsExpenseSuggestionsOpen = false;
+                NewExpenseNameBox.Focus();
+                e.Handled = true;
+            }
+        }
+
+        private void ExpenseSuggestionList_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is not SalaryViewModel vm)
+                return;
+
+            var item = ItemsControl.ContainerFromElement(ExpenseSuggestionList, e.OriginalSource as DependencyObject) as ListBoxItem;
+            if (item?.DataContext is ExpenseSuggestion suggestion)
+                vm.PickExpenseSuggestionCommand.Execute(suggestion);
+        }
+
+        private void ExpenseEditName_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is TextBox box && box.IsVisible)
+            {
+                Dispatcher.BeginInvoke(() =>
+                {
+                    box.Focus();
+                    box.SelectAll();
+                }, DispatcherPriority.Input);
             }
         }
 
@@ -399,9 +485,34 @@ namespace Win11DesktopApp.Views
                 Tag = field.Id
             };
 
+            if (!string.IsNullOrEmpty(prefix))
+            {
+                // Small coloured badge: green "+" adds to the pay, red "−" takes from it.
+                // Rounded square (not a circle): fixed size with a small corner radius.
+                panel.Children.Add(new Border
+                {
+                    Background = brush,
+                    Width = 18,
+                    Height = 18,
+                    CornerRadius = new CornerRadius(4),
+                    Margin = new Thickness(0, 0, 6, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Child = new TextBlock
+                    {
+                        Text = prefix,
+                        Foreground = Brushes.White,
+                        FontWeight = FontWeights.Bold,
+                        FontSize = 13,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Margin = new Thickness(0, -2, 0, 0)
+                    }
+                });
+            }
+
             panel.Children.Add(new TextBlock
             {
-                Text = $"{prefix}{field.Name}",
+                Text = field.Name,
                 VerticalAlignment = VerticalAlignment.Center
             });
 
@@ -423,6 +534,87 @@ namespace Win11DesktopApp.Views
             }
 
             return panel;
+        }
+
+        private Rect _lastGridClipRect = Rect.Empty;
+
+        /// <summary>
+        /// Clips the grid to the visible inside of the rounded card. The grid can be laid out wider than the card
+        /// (wide columns), so the clip uses the card's inner box, not the grid's own size; otherwise the right
+        /// end of the dark header would stay square.
+        /// </summary>
+        private void ClipSalaryGridCorners()
+        {
+            const double radius = 11; // card radius 12 minus its 1px border
+            var border = DataGridBorder.BorderThickness;
+            var innerWidth = DataGridBorder.ActualWidth - border.Left - border.Right;
+            var innerHeight = DataGridBorder.ActualHeight - border.Top - border.Bottom;
+            if (innerWidth <= 0 || innerHeight <= 0 || !SalaryGrid.IsVisible)
+                return;
+
+            Point origin;
+            try
+            {
+                origin = DataGridBorder.TranslatePoint(new Point(border.Left, border.Top), SalaryGrid);
+            }
+            catch (InvalidOperationException)
+            {
+                return;
+            }
+
+            var rect = new Rect(origin.X, origin.Y, innerWidth, innerHeight);
+            if (rect == _lastGridClipRect)
+                return;
+
+            _lastGridClipRect = rect;
+            var clip = new RectangleGeometry(rect, radius, radius);
+            clip.Freeze();
+            SalaryGrid.Clip = clip;
+        }
+
+        private void ClipSalaryGridCornersIfMoved()
+        {
+            if (DataGridBorder.ActualWidth > 0)
+                ClipSalaryGridCorners();
+        }
+
+        // ===== Column resize guide: a blue line through the whole table while dragging a column border =====
+
+        private void SalaryGrid_ColumnResizeStarted(object sender, DragStartedEventArgs e)
+        {
+            if (e.OriginalSource is Thumb { Name: "PART_RightHeaderGripper" } thumb)
+                MoveColumnResizeGuide(thumb);
+        }
+
+        private void SalaryGrid_ColumnResizeDelta(object sender, DragDeltaEventArgs e)
+        {
+            if (e.OriginalSource is Thumb { Name: "PART_RightHeaderGripper" } thumb)
+                Dispatcher.BeginInvoke(DispatcherPriority.Render, () => MoveColumnResizeGuide(thumb));
+        }
+
+        private void SalaryGrid_ColumnResizeCompleted(object sender, DragCompletedEventArgs e)
+        {
+            ColumnResizeGuide.Visibility = Visibility.Collapsed;
+        }
+
+        private void MoveColumnResizeGuide(Thumb thumb)
+        {
+            if (!thumb.IsVisible || !ColumnResizeGuideLayer.IsVisible)
+                return;
+
+            try
+            {
+                var x = thumb.TransformToAncestor(ColumnResizeGuideLayer).Transform(new Point(thumb.ActualWidth / 2, 0)).X;
+                Canvas.SetLeft(ColumnResizeGuide, x - ColumnResizeGuide.Width / 2);
+                Canvas.SetTop(ColumnResizeGuide, 0);
+                ColumnResizeGuide.Height = ColumnResizeGuideLayer.ActualHeight;
+                ColumnResizeGuide.Visibility = Visibility.Visible;
+            }
+            catch (InvalidOperationException)
+            {
+                // The header is not under this layer (e.g. during a rebuild); just skip the guide.
+                ColumnResizeGuide.Visibility = Visibility.Collapsed;
+            }
         }
 
         private void SalaryGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)

@@ -1006,6 +1006,8 @@ namespace Win11DesktopApp.ViewModels
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<ActivityLogViewModel>()) },
                 new() { Id = "candidates", TitleKey = "BtnCandidates",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<CandidatesViewModel>()) },
+                new() { Id = "vacancies", TitleKey = "BtnVacancies",
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo<VacanciesViewModel>()) },
                 new() { Id = "news", TitleKey = "BtnNews",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<NewsViewModel>()) },
                 new() { Id = "aichat", TitleKey = "BtnAIAssistant",

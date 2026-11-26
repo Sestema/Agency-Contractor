@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
@@ -35,7 +36,9 @@ namespace Win11DesktopApp.ViewModels
         private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
         private readonly CurrentProfileService _currentProfileService;
         private List<ActivityLogEntry> _allEntries = new();
+        private readonly EmployeeHistoryCleanupService? _historyCleanupService;
         private HashSet<string> _undoableArchiveOperationIds = new(StringComparer.OrdinalIgnoreCase);
+        private HashSet<string> _undoableRestoreOperationIds = new(StringComparer.OrdinalIgnoreCase);
         private int _loadVersion;
 
         private static readonly Dictionary<string, (string colorHex, string icon, string resKey)> CategoryMeta = new()
@@ -140,8 +143,10 @@ namespace Win11DesktopApp.ViewModels
             EmployeeService? employeeService = null,
             ProfileAuthService? profileAuthService = null,
             EmployeeDetailsViewModelFactory? employeeDetailsViewModelFactory = null,
-            CurrentProfileService? currentProfileService = null)
+            CurrentProfileService? currentProfileService = null,
+            EmployeeHistoryCleanupService? historyCleanupService = null)
         {
+            _historyCleanupService = historyCleanupService;
             _logService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _recentlyDeletedService = recentlyDeletedService ?? throw new InvalidOperationException("RecentlyDeletedService is not initialized.");
@@ -172,7 +177,7 @@ namespace Win11DesktopApp.ViewModels
                     SelectedCategory = SelectedCategory == cat ? "" : cat;
             });
             OpenEmployeeCommand = new RelayCommand(OpenEmployeeProfile, CanOpenEmployeeProfile);
-            UndoCommand = new AsyncRelayCommand(UndoArchiveAsync, CanUndoArchive);
+            UndoCommand = new AsyncRelayCommand(UndoAsync, CanUndo);
             ExportCommand = new RelayCommand(o => ExportToExcel());
             ClearAllCommand = new RelayCommand(o => ClearAllHistory());
 
@@ -308,20 +313,19 @@ namespace Win11DesktopApp.ViewModels
                             : null;
                     }
 
-                    var undoableArchiveOperationIds = _employeeService.LoadArchiveLog()
-                        .Where(entry =>
-                            string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
-                            && !entry.IsReverted
-                            && !string.IsNullOrWhiteSpace(entry.OperationId))
-                        .Select(entry => entry.OperationId)
-                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    var archiveLog = _employeeService.LoadArchiveLog();
+                    var undoableArchiveOperationIds = BuildUndoableArchiveIds(archiveLog);
+                    var undoableRestoreOperationIds = _historyCleanupService?.IsSupported == true
+                        ? BuildUndoableRestoreIds(archiveLog, DateTime.Now,
+                            entry => _employeeService.HasTransferSnapshot(entry.OperationId) && Directory.Exists(entry.EmployeeFolder))
+                        : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                     var categories = entries.Select(e => e.Category)
                         .Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c).ToList();
                     var firms = entries.Select(e => e.FirmName)
                         .Where(f => !string.IsNullOrEmpty(f)).Distinct().OrderBy(f => f).ToList();
 
-                    return new ActivityLogSnapshot(entries, undoableArchiveOperationIds, categories, firms);
+                    return new ActivityLogSnapshot(entries, undoableArchiveOperationIds, undoableRestoreOperationIds, categories, firms);
                 });
 
                 if (version != _loadVersion)
@@ -329,6 +333,7 @@ namespace Win11DesktopApp.ViewModels
 
                 _allEntries = snapshot.Entries;
                 _undoableArchiveOperationIds = snapshot.UndoableArchiveOperationIds;
+                _undoableRestoreOperationIds = snapshot.UndoableRestoreOperationIds;
                 TotalCount = _allEntries.Count;
 
                 Categories.Clear();
@@ -419,6 +424,174 @@ namespace Win11DesktopApp.ViewModels
             _entries.ReplaceAll(filtered);
             FilteredCount = filtered.Count;
             HasEntries = filtered.Count > 0;
+        }
+
+        private bool CanUndo(object? parameter)
+            => CanUndoArchive(parameter)
+               || IsTransferUndoEligible(parameter as ActivityLogEntry, _undoableRestoreOperationIds, DateTime.Now);
+
+        private Task UndoAsync(object? parameter)
+        {
+            if (parameter is ActivityLogEntry { ActionType: "EmployeeRestored" })
+                return UndoTransferAsync(parameter);
+            return UndoArchiveAsync(parameter);
+        }
+
+        /// <summary>
+        /// Archive operations that can still be undone: not undone yet and the person was not restored
+        /// into a firm afterwards (then the archive copy is gone, or worse, a stale copy would make a duplicate).
+        /// </summary>
+        internal static HashSet<string> BuildUndoableArchiveIds(IReadOnlyList<ArchiveLogEntry> archiveLog)
+        {
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in archiveLog)
+            {
+                if (!string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
+                    || entry.IsReverted
+                    || string.IsNullOrWhiteSpace(entry.OperationId))
+                    continue;
+
+                var archivedAt = ParseLogTime(entry.Timestamp);
+                var restoredLater = archiveLog.Any(other =>
+                    string.Equals(other.Action, "Restored", StringComparison.OrdinalIgnoreCase)
+                    && SameName(other.EmployeeName, entry.EmployeeName)
+                    && ParseLogTime(other.Timestamp) >= archivedAt);
+                if (!restoredLater)
+                    result.Add(entry.OperationId);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Restore operations that can be put back: from the last 10 days, the last move of that person
+        /// (not archived again afterwards) and still in place (snapshot and folder exist).
+        /// </summary>
+        /// <summary>How long a transfer can be put back: time to decide.</summary>
+        internal static readonly TimeSpan TransferUndoWindow = TimeSpan.FromDays(10);
+
+        internal static HashSet<string> BuildUndoableRestoreIds(IReadOnlyList<ArchiveLogEntry> archiveLog, DateTime now, Func<ArchiveLogEntry, bool> stillInPlace)
+        {
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in archiveLog)
+            {
+                if (!string.Equals(entry.Action, "Restored", StringComparison.OrdinalIgnoreCase)
+                    || entry.IsReverted
+                    || string.IsNullOrWhiteSpace(entry.OperationId))
+                    continue;
+
+                var restoredAt = ParseLogTime(entry.Timestamp);
+                if (restoredAt == null || now - restoredAt.Value > TransferUndoWindow)
+                    continue;
+
+                var movedLater = archiveLog.Any(other =>
+                    !ReferenceEquals(other, entry)
+                    && (string.Equals(other.Action, "Archived", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(other.Action, "Restored", StringComparison.OrdinalIgnoreCase))
+                    && SameName(other.EmployeeName, entry.EmployeeName)
+                    && ParseLogTime(other.Timestamp) > restoredAt);
+                if (!movedLater && stillInPlace(entry))
+                    result.Add(entry.OperationId);
+            }
+            return result;
+        }
+
+        internal static bool IsTransferUndoEligible(ActivityLogEntry? entry, ISet<string> undoableRestoreOperationIds, DateTime now)
+        {
+            if (entry == null
+                || !string.Equals(entry.ActionType, "EmployeeRestored", StringComparison.OrdinalIgnoreCase)
+                || string.IsNullOrWhiteSpace(entry.RelatedOperationId)
+                || !undoableRestoreOperationIds.Contains(entry.RelatedOperationId))
+                return false;
+
+            var ts = entry.ParsedTimestamp ?? ParseLogTime(entry.Timestamp);
+            return ts != null && now - ts.Value <= TransferUndoWindow;
+        }
+
+        private static bool SameName(string? a, string? b)
+            => !string.IsNullOrWhiteSpace(a) && string.Equals(a.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+        private static DateTime? ParseLogTime(string? text)
+            => DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var value) ? value : null;
+
+        private async Task<bool> ConfirmWithPasswordAsync()
+        {
+            var currentProfile = _currentProfileService.CurrentProfile;
+            if (currentProfile == null || string.IsNullOrWhiteSpace(currentProfile.ClientId))
+            {
+                MessageBox.Show(Res("ConfirmPasswordNoProfile"), Res("ConfirmPasswordTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            var passwordWindow = new Views.ConfirmPasswordWindow { Owner = Application.Current?.MainWindow };
+            if (passwordWindow.ShowDialog() != true || !passwordWindow.IsConfirmed)
+                return false;
+
+            var authResult = await _profileAuthService.AuthenticateAsync(currentProfile.ClientId, passwordWindow.EnteredPassword);
+            if (!authResult.Success)
+            {
+                MessageBox.Show(Res("ConfirmPasswordFailed"), Res("ConfirmPasswordTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+            return true;
+        }
+
+        private async Task UndoTransferAsync(object? parameter)
+        {
+            if (parameter is not ActivityLogEntry entry || _historyCleanupService == null)
+                return;
+
+            if (!IsTransferUndoEligible(entry, _undoableRestoreOperationIds, DateTime.Now))
+            {
+                MessageBox.Show(Res("ActLogUndoUnavailable"), Res("TitleWarning"), MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Check before asking for the password, so the user sees at once why it cannot be done.
+            var check = await Task.Run(() => _historyCleanupService.CheckTransferUndo(entry.RelatedOperationId));
+            if (!check.CanUndo)
+            {
+                MessageBox.Show(check.Reason, Res("TitleWarning"), MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (!await ConfirmWithPasswordAsync())
+                return;
+
+            var confirm = MessageBox.Show(
+                string.Format(Res("ActLogUndoTransferConfirmFmt"), check.EmployeeName, check.RestoredFirm, check.OriginalFirm),
+                Res("TitleWarning"),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes)
+                return;
+
+            var result = await _historyCleanupService.UndoTransferAsync(entry.RelatedOperationId);
+            if (!result.Success)
+            {
+                MessageBox.Show(
+                    string.IsNullOrWhiteSpace(result.Message) ? Res("ActLogUndoFailed") : result.Message,
+                    Res("TitleError"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return;
+            }
+
+            var description = string.Format(Res("ActLogUndoTransferDoneFmt"),
+                result.EmployeeName, result.OriginalFirm, result.RestoredFirm, result.OriginalFirm);
+            _logService.Log(
+                "TransferUndone",
+                "Archive",
+                result.OriginalFirm,
+                result.EmployeeName,
+                description,
+                result.RestoredFirm,
+                result.OriginalFirm,
+                details: result.BackupPath,
+                employeeFolder: result.NewFolder,
+                relatedOperationId: entry.RelatedOperationId);
+
+            await LoadEntriesAsync();
+            ToastService.Instance.Success(description);
         }
 
         private bool CanUndoArchive(object? parameter)
@@ -629,17 +802,20 @@ namespace Win11DesktopApp.ViewModels
         public ActivityLogSnapshot(
             List<ActivityLogEntry> entries,
             HashSet<string> undoableArchiveOperationIds,
+            HashSet<string> undoableRestoreOperationIds,
             List<string> categories,
             List<string> firms)
         {
             Entries = entries;
             UndoableArchiveOperationIds = undoableArchiveOperationIds;
+            UndoableRestoreOperationIds = undoableRestoreOperationIds;
             Categories = categories;
             Firms = firms;
         }
 
         public List<ActivityLogEntry> Entries { get; }
         public HashSet<string> UndoableArchiveOperationIds { get; }
+        public HashSet<string> UndoableRestoreOperationIds { get; }
         public List<string> Categories { get; }
         public List<string> Firms { get; }
     }

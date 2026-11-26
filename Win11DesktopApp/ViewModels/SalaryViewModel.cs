@@ -20,7 +20,7 @@ using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.ViewModels
 {
-    public class SalaryViewModel : ViewModelBase, ICleanable, ISalaryWorkspaceGuard
+    public partial class SalaryViewModel : ViewModelBase, ICleanable, ISalaryWorkspaceGuard
     {
         private readonly NavigationService _navigationService;
         private readonly FinanceService _financeService;
@@ -257,7 +257,7 @@ namespace Win11DesktopApp.ViewModels
         public decimal TotalGross { get => _totalGross; set => SetProperty(ref _totalGross, value); }
 
         private decimal _totalNet;
-        public decimal TotalNet { get => _totalNet; set { SetProperty(ref _totalNet, value); OnPropertyChanged(nameof(IsNetNegative)); } }
+        public decimal TotalNet { get => _totalNet; set { SetProperty(ref _totalNet, value); OnPropertyChanged(nameof(IsNetNegative)); OnPropertyChanged(nameof(TotalNetText)); } }
         public bool IsNetNegative => _totalNet < 0;
 
         private decimal _totalHours;
@@ -267,10 +267,21 @@ namespace Win11DesktopApp.ViewModels
         public int TotalEmployees { get => _totalEmployees; set => SetProperty(ref _totalEmployees, value); }
 
         private decimal _grandTotal;
-        public decimal GrandTotal { get => _grandTotal; set => SetProperty(ref _grandTotal, value); }
+        public decimal GrandTotal { get => _grandTotal; set { if (SetProperty(ref _grandTotal, value)) OnPropertyChanged(nameof(GrandTotalText)); } }
 
         private decimal _totalExpenses;
-        public decimal TotalExpenses { get => _totalExpenses; set => SetProperty(ref _totalExpenses, value); }
+        public decimal TotalExpenses
+        {
+            get => _totalExpenses;
+            set
+            {
+                if (SetProperty(ref _totalExpenses, value))
+                {
+                    OnPropertyChanged(nameof(TotalExpensesText));
+                    OnPropertyChanged(nameof(ExpensesSectionSummaryText));
+                }
+            }
+        }
 
         private int _paidCount;
         public int PaidCount { get => _paidCount; set => SetProperty(ref _paidCount, value); }
@@ -588,7 +599,8 @@ namespace Win11DesktopApp.ViewModels
             AddAdvanceCommand = new RelayCommand(o => OpenAdvanceDialog(), _ => CanEditAnyVisibleSalary);
             ManageColumnsCommand = new RelayCommand(o => OpenManageColumns(), _ => CanEditAnyVisibleSalary);
             PrintQrCommand = new RelayCommand(_ => OpenPrintQr(), _ => HasQrTransferColumn);
-            AddExpenseCommand = new AsyncRelayCommand(async _ => await AddExpenseAsync(), _ => CanEditSelectedFirmExpenses);
+            AddExpenseCommand = new AsyncRelayCommand(async _ => await AddExpenseAsync(L("FinExpenseNew") ?? "New expense", 0m), _ => CanEditSelectedFirmExpenses);
+            InitExpenseCommands();
             RemoveExpenseCommand = new AsyncRelayCommand(
                 async o => await RemoveExpenseAsync(o as string),
                 o => o is string id && CanRemoveExpense(id));
@@ -2077,6 +2089,7 @@ namespace Win11DesktopApp.ViewModels
                 .ToList();
 
             SyncFirmSummaries(desiredSummaries);
+            OnPropertyChanged(nameof(FirmsSectionSummaryText));
         }
 
         /// <summary>
@@ -4250,10 +4263,14 @@ namespace Win11DesktopApp.ViewModels
             FirmExpenses = new ObservableCollection<FirmExpense>(expenses);
             OnPropertyChanged(nameof(ExpenseHeaderText));
             RecalcTotals();
+            RefreshExpenseView(reloadSuggestions: true);
         }
 
         private void OnExpenseChanged(object? sender, PropertyChangedEventArgs e)
         {
+            if (e.PropertyName is not (nameof(FirmExpense.Name) or nameof(FirmExpense.Amount)))
+                return;
+
             ScheduleRecalcTotals();
             OnPropertyChanged(nameof(ExpenseHeaderText));
             if (sender is FirmExpense exp)
@@ -4279,10 +4296,10 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private async Task AddExpenseAsync()
+        private async Task<bool> AddExpenseAsync(string name, decimal amount)
         {
             if (!PolicyService.EnsureWriteAllowed("додати витрату"))
-                return;
+                return false;
 
             var allLabel = L("FinFilterAll") ?? "All";
             var isAll = string.IsNullOrEmpty(_selectedFirmFilter) || _selectedFirmFilter == allLabel;
@@ -4290,18 +4307,18 @@ namespace Win11DesktopApp.ViewModels
             if (isAll)
             {
                 StatusMessage = L("FinExpenseSelectFirm") ?? "Select a firm first to add expenses";
-                return;
+                return false;
             }
             if (!CanEditSalaryFirm(_selectedFirmFilter, "додати витрату"))
-                return;
+                return false;
 
             var exp = new FirmExpense
             {
                 Year = _selectedYear,
                 Month = _selectedMonth,
                 FirmName = _selectedFirmFilter,
-                Name = L("FinExpenseNew") ?? "New expense",
-                Amount = 0,
+                Name = name,
+                Amount = amount,
                 CanEdit = true
             };
 
@@ -4312,19 +4329,21 @@ namespace Win11DesktopApp.ViewModels
             catch (Exception ex)
             {
                 LoggingService.LogError("SalaryViewModel.AddExpenseAsync", ex);
-                return;
+                return false;
             }
 
             if (!string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage))
             {
                 StatusMessage = _financeService.LastSalaryConflictMessage;
-                return;
+                return false;
             }
 
             exp.PropertyChanged += OnExpenseChanged;
             FirmExpenses.Add(exp);
             OnPropertyChanged(nameof(ExpenseHeaderText));
             RecalcTotals();
+            RefreshExpenseView(reloadSuggestions: false);
+            return true;
         }
 
         private async Task RemoveExpenseAsync(string? expenseId)
@@ -4360,6 +4379,7 @@ namespace Win11DesktopApp.ViewModels
             FirmExpenses.Remove(item);
             OnPropertyChanged(nameof(ExpenseHeaderText));
             RecalcTotals();
+            RefreshExpenseView(reloadSuggestions: false);
         }
 
         private async Task MarkAllPaidAsync()
